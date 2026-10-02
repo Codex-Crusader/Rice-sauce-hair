@@ -1,0 +1,13 @@
+[Unit]
+Description=Idle actions: dim, lock, suspend (hypridle)
+PartOf=hypr-desktop.target
+After=hypr-desktop.target
+# Stop trying after 5 failures in 60 s, so a broken part cannot loop forever
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+[Service]
+ExecStart=/usr/bin/hypridle
+Restart=on-failure
+RestartSec=2
+

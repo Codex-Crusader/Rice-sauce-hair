@@ -1,0 +1,5 @@
+#!/bin/sh
+# Terminal for the start menu. nwg-drawer calls: term-run -e "<command line>".
+# It gives the whole command line as one argument, so let sh split it.
+[ "$1" = "-e" ] && shift
+exec kitty sh -c "$*"

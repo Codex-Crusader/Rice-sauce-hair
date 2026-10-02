@@ -1,0 +1,6 @@
+[Desktop Entry]
+Name=Hyprland (safe mode)
+Comment=Minimal Hyprland without plugins, bars, or the companion. Use it when the normal session fails.
+Exec=/usr/bin/Hyprland --config /usr/local/share/hyprland-safe/safe.lua
+Type=Application
+DesktopNames=Hyprland

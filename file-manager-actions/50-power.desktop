@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Action
+Name=Power
+Icon=system-shutdown
+Profiles=any;
+
+[X-Action-Profile any]
+Name=Power
+MimeTypes=all/all;
+SelectionCount=<2
+Exec=sh -c "$HOME/dotfiles/bin/power-menu"

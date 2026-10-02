@@ -1,0 +1,13 @@
+[Unit]
+Description=Wallpaper and desktop icons (pcmanfm-qt)
+PartOf=hypr-desktop.target
+After=hypr-desktop.target
+# Stop trying after 5 failures in 60 s, so a broken part cannot loop forever
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+[Service]
+ExecStart=/usr/bin/pcmanfm-qt --desktop
+Restart=on-failure
+RestartSec=2
+Environment=QT_QPA_PLATFORMTHEME=qt6ct

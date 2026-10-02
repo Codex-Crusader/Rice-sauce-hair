@@ -1,0 +1,10 @@
+# greetd: login manager. Shows ReGreet (graphical) on tty1.
+[terminal]
+vt = 1
+
+[default_session]
+# cage runs ReGreet full screen.
+# Hybrid GPU laptops: use the line with WLR_DRM_DEVICES (see docs/INSTALL.md, "Hybrid GPU").
+# command = "env WLR_DRM_DEVICES=/dev/dri/amd-igpu cage -s -- regreet"
+command = "cage -s -- regreet"
+user = "greeter"

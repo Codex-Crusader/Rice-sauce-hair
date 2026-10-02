@@ -1,0 +1,55 @@
+#!/bin/bash
+# Quick system health check. Prints one line per check: OK or WARN.
+#   health           print all checks
+#   health --notify  print, and send one notification if anything is wrong
+problems=()
+ok()   { echo "OK    $1"; }
+warn() { echo "WARN  $1"; problems+=("$1"); }
+
+failed=$(systemctl --failed --no-legend --plain | awk '{print $1}' | tr '\n' ' ')
+[ -z "$failed" ] && ok "no failed system services" || warn "failed system services: $failed"
+failed=$(systemctl --user --failed --no-legend --plain | awk '{print $1}' | tr '\n' ' ')
+[ -z "$failed" ] && ok "no failed user services" || warn "failed user services: $failed"
+
+lspci -d 10de: | grep -qi vga && ok "NVIDIA GPU present" || warn "NVIDIA GPU missing (do a full shutdown, not a restart)"
+
+if [ -n "$HYPRLAND_INSTANCE_SIGNATURE" ]; then
+    errors=$(hyprctl configerrors | grep -v '^$')
+    [ -z "$errors" ] && ok "Hyprland config has no errors" || warn "Hyprland config errors: $errors"
+    hyprctl plugin list 2>/dev/null | grep -q hyprbars && ok "title bars plugin loaded" \
+        || warn "title bars plugin not loaded (run: hyprpm update, then log out and in)"
+fi
+
+used=$(df --output=pcent / | tail -1 | tr -dc 0-9)
+[ "$used" -lt 85 ] && ok "disk / ${used}% used" || warn "disk / is ${used}% full"
+
+systemctl is-active --quiet ollama && ok "Ollama running" || warn "Ollama service is not running"
+
+if command -v checkupdates >/dev/null; then
+    n=$(checkupdates 2>/dev/null | wc -l)
+    [ "$n" -lt 50 ] && ok "$n updates waiting" || warn "$n updates waiting (run: sysupdate)"
+fi
+
+n=$(git -C ~/dotfiles status --porcelain 2>/dev/null | wc -l)
+[ "$n" -eq 0 ] && ok "dotfiles committed" || warn "$n uncommitted changes in ~/dotfiles"
+n=$(git -C ~/dotfiles log --oneline @{u}..HEAD 2>/dev/null | wc -l)
+[ "$n" -eq 0 ] && ok "dotfiles pushed to GitHub" || warn "$n commits not pushed to GitHub (run: git -C ~/dotfiles push)"
+
+# Boot: GRUB must be first, or the laptop starts Windows directly (Windows updates can change this)
+first=$(efibootmgr 2>/dev/null | awk -F'[ ,]' '/^BootOrder/ {print $2}')
+efibootmgr 2>/dev/null | grep -q "^Boot${first}\* GRUB" && ok "GRUB is first in the boot order" \
+    || warn "GRUB is not first in the boot order (see docs/RECOVERY.md; fix with: sudo efibootmgr -o <GRUB>,<others>)"
+grep -q 'grub-btrfs-overlayfs' /etc/mkinitcpio.conf && ok "snapshots can boot (overlayfs hook)" \
+    || warn "snapshot boot hook missing in /etc/mkinitcpio.conf"
+
+# Virus signatures older than 3 days: the daily update stopped
+sig=$(stat -c %Y /var/lib/clamav/daily.cvd /var/lib/clamav/daily.cld 2>/dev/null | sort -n | tail -1)
+if [ -n "$sig" ]; then
+    days=$(( ($(date +%s) - sig) / 86400 ))
+    [ "$days" -le 3 ] && ok "virus signatures ${days} days old" || warn "virus signatures are ${days} days old"
+fi
+
+if [ "$1" = "--notify" ] && [ ${#problems[@]} -gt 0 ]; then
+    notify-send -a "Health check" -u normal "Health check: ${#problems[@]} problem(s)" "$(printf '%s\n' "${problems[@]}")"
+fi
+[ ${#problems[@]} -eq 0 ]

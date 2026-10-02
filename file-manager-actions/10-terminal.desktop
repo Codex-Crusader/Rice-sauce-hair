@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Action
+Name=Open Terminal
+Icon=utilities-terminal
+Profiles=any;
+
+[X-Action-Profile any]
+Name=Open Terminal
+MimeTypes=all/all;
+SelectionCount=<2
+Exec=kitty --working-directory %d

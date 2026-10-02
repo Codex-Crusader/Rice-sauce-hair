@@ -1,0 +1,6 @@
+# ~/.zshenv: read by every zsh (login, interactive, and scripts).
+
+# User programs (claude and others) in ~/.local/bin
+typeset -U path
+path=("$HOME/.local/bin" $path)
+export PATH

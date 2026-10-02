@@ -1,0 +1,4 @@
+# OPTIONAL, hybrid GPU laptops only. Change 0000:05:00.0 to the PCI address of YOUR iGPU
+# (lspci -D | grep VGA). Stable name for the iGPU card. card0/card1 numbers can change between boots.
+# Hyprland uses it through AQ_DRM_DEVICES (see shell/profile-gpu.sh).
+KERNEL=="card*", KERNELS=="0000:05:00.0", SUBSYSTEM=="drm", SUBSYSTEMS=="pci", SYMLINK+="dri/amd-igpu"

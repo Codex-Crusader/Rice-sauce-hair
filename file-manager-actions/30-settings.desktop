@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Action
+Name=Settings
+Icon=preferences-system
+Profiles=any;
+
+[X-Action-Profile any]
+Name=Settings
+MimeTypes=all/all;
+SelectionCount=<2
+Exec=sh -c "$HOME/dotfiles/bin/settings-menu"

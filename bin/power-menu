@@ -1,0 +1,10 @@
+#!/bin/sh
+# Power menu with Rofi.
+choice=$(printf '󰌾  Lock\n󰍃  Log out\n󰤄  Sleep\n󰜉  Restart\n󰐥  Shut down\n' | rofi -dmenu -i -p "Power")
+case "$choice" in
+    *Lock)      pidof hyprlock || hyprlock ;;
+    *"Log out") hyprctl dispatch 'hl.dsp.exit()' ;;
+    *Sleep)     systemctl suspend ;;
+    *Restart)   systemctl reboot ;;
+    *"Shut down") systemctl poweroff ;;
+esac

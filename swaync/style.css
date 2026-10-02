@@ -1,0 +1,45 @@
+/* swaync. Theme "Amphora". */
+@define-color bg      rgba(13, 6, 8, 0.90);
+@define-color surface #1a1013;
+@define-color overlay #2a1c20;
+@define-color marble  #ede6da;
+@define-color muted   #bf9795;
+@define-color gold    #c9a15b;
+@define-color wine    #6b2d4a;
+@define-color red     #c0503a;
+
+* { font-family: "JetBrainsMono Nerd Font"; color: @marble; }
+
+.control-center {
+    background: @bg;
+    border: 1px solid @gold;
+    border-radius: 14px;
+    padding: 8px;
+}
+
+.widget-title > label { font-family: "Cinzel"; font-weight: bold; font-size: 1.2rem; color: @gold; }
+.widget-title > button, .widget-dnd > switch {
+    background: @overlay; border: 1px solid alpha(@gold, 0.5); border-radius: 8px;
+}
+.widget-dnd > switch:checked { background: @wine; }
+
+.widget-buttons-grid > flowbox > flowboxchild > button {
+    background: @surface; border: 1px solid alpha(@gold, 0.4); border-radius: 10px;
+    font-size: 1.3rem; min-width: 64px; min-height: 44px;
+}
+.widget-buttons-grid > flowbox > flowboxchild > button:hover { background: @overlay; }
+.widget-buttons-grid > flowbox > flowboxchild > button.toggle:checked { background: @wine; color: @gold; }
+
+.widget-volume, .widget-backlight { background: @surface; border-radius: 10px; padding: 6px 10px; margin: 4px 0; }
+trough { background: @overlay; } highlight { background: @gold; }
+
+.notification-row .notification-background .notification,
+.notification {
+    background: @surface;
+    border: 1px solid alpha(@gold, 0.7);
+    border-radius: 12px;
+}
+.notification.critical { border-color: @red; }
+.notification .summary { color: @gold; font-weight: bold; }
+.notification .body { color: @muted; }
+.close-button { background: @overlay; border-radius: 50%; }

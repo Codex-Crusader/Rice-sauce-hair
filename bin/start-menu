@@ -1,0 +1,12 @@
+#!/bin/sh
+# Start menu: nwg-drawer as a panel above the taskbar, with power buttons.
+# A second press closes it.
+pkill -x nwg-drawer && exit 0
+exec nwg-drawer -nofs -ovl -mb 80 -ml 8 -mr 1100 -mt 120 -c 4 -is 48 -spacing 12 \
+    -fm pcmanfm-qt -term "$HOME/dotfiles/bin/term-run" \
+    -pblock "pidof hyprlock || hyprlock" \
+    -pbexit "hyprctl dispatch 'hl.dsp.exit()'" \
+    -pbreboot "systemctl reboot" \
+    -pbpoweroff "systemctl poweroff" \
+    -pbsleep "systemctl suspend" \
+    -pbuseicontheme

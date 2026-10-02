@@ -1,0 +1,3 @@
+#!/bin/sh
+# Clipboard history: select an entry with Rofi, then copy it again.
+cliphist list | rofi -dmenu -i -p "Clipboard" | cliphist decode | wl-copy

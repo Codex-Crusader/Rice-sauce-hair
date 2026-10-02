@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Action
+Name=Lock Screen
+Icon=system-lock-screen
+Profiles=any;
+
+[X-Action-Profile any]
+Name=Lock Screen
+MimeTypes=all/all;
+SelectionCount=<2
+Exec=sh -c 'pidof hyprlock || hyprlock'

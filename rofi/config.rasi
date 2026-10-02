@@ -1,0 +1,65 @@
+/* Rofi launcher. Theme "Amphora". */
+configuration {
+    modi: "drun,run,window";
+    show-icons: true;
+    icon-theme: "Papirus-Dark";
+    drun-display-format: "{name}";
+    display-drun: "Apps";
+    display-run: "Run";
+    display-window: "Windows";
+}
+
+* {
+    bg:      rgba(13, 6, 8, 85%);
+    surface: #1a1013;
+    marble:  #ede6da;
+    muted:   #bf9795;
+    gold:    #c9a15b;
+    wine:    #6b2d4a;
+
+    background-color: transparent;
+    text-color: @marble;
+    font: "JetBrainsMono Nerd Font 12";
+}
+
+window {
+    width: 560px;
+    background-color: @bg;
+    border: 1px;
+    border-color: @gold;
+    border-radius: 14px;
+    padding: 16px;
+}
+
+mainbox { spacing: 12px; children: [ inputbar, listview ]; }
+
+inputbar {
+    background-color: @surface;
+    border-radius: 10px;
+    padding: 10px 12px;
+    spacing: 10px;
+    children: [ prompt, entry ];
+}
+
+prompt { text-color: @gold; font: "Cinzel Bold 12"; }
+entry  { placeholder: "Search"; placeholder-color: @muted; }
+
+listview { lines: 8; spacing: 4px; scrollbar: false; border: 0; }
+
+element {
+    padding: 8px 10px;
+    border-radius: 8px;
+    spacing: 10px;
+}
+/* Rofi's default theme sets each row state, so set them all here */
+element normal.normal,
+element alternate.normal,
+element normal.active,
+element alternate.active { background-color: transparent; text-color: @marble; }
+element normal.urgent,
+element alternate.urgent { background-color: transparent; text-color: @gold; }
+element selected.normal,
+element selected.active,
+element selected.urgent  { background-color: @wine; text-color: @gold; }
+element-icon { size: 24px; }
+element-text { text-color: inherit; vertical-align: 0.5; }

@@ -1,0 +1,30 @@
+# ReGreet: the graphical login screen. Theme "Amphora".
+
+# No background image: the screen is black. Add your own (see docs/CUSTOMIZE.md):
+# [background]
+# path = "/usr/share/backgrounds/your-wallpaper.jpg"
+# fit = "Cover"
+
+# Passed to the session that ReGreet starts (Hyprland).
+# Hybrid GPU laptops only (see docs/INSTALL.md): Hyprland uses only the iGPU. A login manager does not read ~/.zprofile.
+# [env]
+# AQ_DRM_DEVICES = "/dev/dri/amd-igpu"
+
+[GTK]
+application_prefer_dark_theme = true
+cursor_theme_name = "Adwaita"
+font_name = "Noto Sans 14"
+icon_theme_name = "Papirus-Dark"
+theme_name = "Adwaita"
+
+[commands]
+reboot = ["systemctl", "reboot"]
+poweroff = ["systemctl", "poweroff"]
+
+[appearance]
+greeting_msg = "Welcome back"
+
+[widget.clock]
+format = "%A %d %B   %H:%M"
+resolution = "500ms"
+label_width = 320

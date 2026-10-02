@@ -1,0 +1,16 @@
+#!/bin/sh
+# screenshot area: select an area, copy to clipboard, also save it. screenshot annotate: draw on it first.
+# screenshot full: the full screen, copy to clipboard, also save it.
+dir="$HOME/Pictures/Screenshots"
+mkdir -p "$dir"
+file="$dir/$(date +%F_%H-%M-%S).png"
+case "$1" in
+    annotate)  # draw arrows, boxes, text; satty saves to $file and copies on its own
+        geometry=$(slurp) || exit 0
+        grim -g "$geometry" - | satty --filename - --output-filename "$file" --copy-command wl-copy --early-exit
+        exit 0 ;;
+    area) geometry=$(slurp) || exit 0; grim -g "$geometry" "$file" ;;
+    *)    grim "$file" ;;
+esac
+wl-copy < "$file"
+notify-send -a Screenshot -i "$file" "Screenshot saved" "$file (also in the clipboard)"

@@ -1,0 +1,3 @@
+#!/bin/sh
+# Open the full cheat sheet in a floating Kitty window (class "cheatsheet").
+exec kitty --class cheatsheet --title "Cheat sheet" sh -c "$HOME/dotfiles/bin/keyhints full | less -R"

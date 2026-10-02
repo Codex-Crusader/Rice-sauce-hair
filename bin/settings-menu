@@ -1,0 +1,11 @@
+#!/bin/sh
+# Settings menu with Rofi. Each item opens one settings tool.
+choice=$(printf '󰕾  Sound\n󰂯  Bluetooth\n󰖩  Network\n󰏘  Appearance (GTK)\n󰍹  Display brightness and night light\n󰓅  Power profile\n' | rofi -dmenu -i -p "Settings")
+case "$choice" in
+    *Sound)      pavucontrol ;;
+    *Bluetooth)  blueman-manager ;;
+    *Network)    nm-connection-editor ;;
+    *Appearance*) nwg-look ;;
+    *Display*)   swaync-client -t -sw ;;
+    *Power*)     p=$(printf 'power-saver\nbalanced\nperformance\n' | rofi -dmenu -p "Profile") && powerprofilesctl set "$p" ;;
+esac

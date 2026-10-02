@@ -1,0 +1,89 @@
+/* Waybar. Theme "Amphora". Colors from ~/dotfiles/theme/palette.sh */
+@define-color bg         rgba(13, 6, 8, 0.72);
+@define-color surface    #1a1013;
+@define-color overlay    #2a1c20;
+@define-color marble     #ede6da;
+@define-color muted      #bf9795;
+@define-color gold       #c9a15b;
+@define-color terracotta #d66a2a;
+@define-color aegean     #5b6fa8;
+@define-color wine       #6b2d4a;
+@define-color red        #c0503a;
+
+* {
+    min-height: 0;
+}
+
+/* Base font on the bar. Labels inherit it, so modules can change it. */
+window#waybar {
+    font-family: "JetBrainsMono Nerd Font";
+    font-size: 13px;
+    background: @bg;
+    color: @marble;
+    border: 1px solid alpha(@gold, 0.6);
+    border-radius: 12px;
+}
+
+/* Titles in Cinzel: workspaces, window title, clock */
+#workspaces button,
+#workspaces button label,
+#window,
+#window label,
+#clock {
+    font-family: "Cinzel";
+    letter-spacing: 1px;
+}
+
+#workspaces button {
+    color: @muted;
+    padding: 0 8px;
+    border-radius: 8px;
+    background: transparent;
+}
+
+#workspaces button.active {
+    color: @gold;
+    background: alpha(@wine, 0.6);
+}
+
+#workspaces button.urgent {
+    color: @red;
+}
+
+#workspaces button:hover {
+    background: @overlay;
+    box-shadow: none;
+}
+
+#window {
+    color: @muted;
+    padding: 0 10px;
+}
+
+#clock {
+    color: @gold;
+    font-size: 15px;
+    font-weight: bold;
+    padding: 0 12px;
+}
+
+#tray,
+#pulseaudio,
+#backlight,
+#network,
+#battery {
+    padding: 0 10px;
+    color: @marble;
+}
+
+#pulseaudio { color: @gold; }
+#network    { color: @aegean; }
+
+#battery.warning  { color: @terracotta; }
+#battery.critical { color: @red; }
+
+tooltip {
+    background: @surface;
+    border: 1px solid @gold;
+    border-radius: 8px;
+}

@@ -1,0 +1,51 @@
+# ~/.zshrc: interactive zsh settings.
+
+# History
+HISTFILE=~/.zsh_history
+HISTSIZE=10000
+SAVEHIST=10000
+setopt share_history hist_ignore_all_dups hist_reduce_blanks
+
+setopt autocd interactive_comments
+bindkey -e  # Emacs-style line editing
+
+# Completion. Load compinit before fzf-tab.
+autoload -Uz compinit && compinit
+zstyle ':completion:*' matcher-list 'm:{a-z}={A-Z}'  # case-insensitive
+zstyle ':completion:*:descriptions' format '[%d]'     # fzf-tab uses this for group names
+zstyle ':completion:*' menu no                        # fzf-tab replaces the zsh menu
+
+# Carapace: completions with descriptions for many commands.
+if (( $+commands[carapace] )); then
+  export CARAPACE_BRIDGES='zsh,bash'
+  source <(carapace _carapace zsh)
+fi
+
+# fzf-tab: Tab opens an fzf popup list. Load after compinit, before the widget plugins.
+[[ -f ~/dotfiles/zsh/fzf-tab/fzf-tab.plugin.zsh ]] && source ~/dotfiles/zsh/fzf-tab/fzf-tab.plugin.zsh
+zstyle ':fzf-tab:*' fzf-flags --height=40% --border=rounded
+zstyle ':fzf-tab:*' switch-group '<' '>'
+
+# Plugins from the official repos. syntax-highlighting must be last.
+source /usr/share/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh
+source /usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
+
+
+# Simple prompt: user@host dir %
+PROMPT='%F{yellow}%n@%m%f %F{blue}%~%f %# '
+
+# fastfetch greeting: only in a new Kitty window, not for commands (zsh -c) or other terminals
+if [[ $TERM == xterm-kitty && -z $ZSH_EXECUTION_STRING && $(ps -o comm= -p $PPID) == kitty ]]; then
+  # A random Chrysos Heir card as the logo; the Arch logo (config.jsonc) when there are no cards.
+  # The see-through copy (bin/soften-cards, made by the desktop widgets) when it exists.
+  cards=(~/Pictures/chrysos-cards/*.png(N))
+  if (( $#cards )); then
+    card=${cards[RANDOM % $#cards + 1]}
+    [[ -f ~/.cache/chrysos-cards/${card:t} ]] && card=~/.cache/chrysos-cards/${card:t}
+    # 19 x 14 cells matches the card ratio (0.57) with Kitty's 9 x 21 px cells
+    fastfetch --logo $card --logo-width 19 --logo-height 14 --logo-preserve-aspect-ratio true
+  else
+    fastfetch
+  fi
+  unset cards card
+fi

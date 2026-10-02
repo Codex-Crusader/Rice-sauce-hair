@@ -1,0 +1,8 @@
+#!/bin/sh
+# Waybar update badge: number of pending package updates (empty when there are none).
+n=$(checkupdates 2>/dev/null | wc -l)
+if [ "$n" -gt 0 ]; then
+    printf '{"text": "󰚰 %s", "tooltip": "%s updates waiting. Click to update.", "class": "pending"}\n' "$n" "$n"
+else
+    printf '{"text": "", "tooltip": "System is up to date"}\n'
+fi

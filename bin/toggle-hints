@@ -1,0 +1,3 @@
+#!/bin/sh
+# Hide or show the hint strip (the second Waybar, config hint.jsonc).
+pkill -SIGUSR1 -f "waybar -c $HOME/.config/waybar/hint.jsonc"

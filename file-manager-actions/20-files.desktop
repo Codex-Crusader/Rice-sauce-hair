@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Action
+Name=File Manager
+Icon=system-file-manager
+Profiles=any;
+
+[X-Action-Profile any]
+Name=File Manager
+MimeTypes=all/all;
+SelectionCount=<2
+Exec=pcmanfm-qt %d

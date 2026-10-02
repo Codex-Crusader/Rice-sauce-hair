@@ -1,0 +1,59 @@
+#!/usr/bin/env python3
+"""Print keybinds from Hyprland (hyprctl binds -j).
+
+  keyhints strip   one line with the [hint] binds, for the hint strip
+  keyhints full    all binds with a description, for the cheat sheet
+The descriptions come from ~/dotfiles/hypr/keymap.lua.
+"""
+import json
+import subprocess
+import sys
+
+HINT = "[hint] "
+# Hyprland modmask bits
+MODS = [(64, "Super"), (4, "Ctrl"), (8, "Alt"), (1, "Shift")]
+KEY_NAMES = {"Super_L": "", "Return": "Enter", "Escape": "Esc", "grave": "`",
+             "left": "←", "right": "→", "up": "↑", "down": "↓",
+             "mouse:272": "Left drag", "mouse:273": "Right drag",
+             "mouse_down": "Wheel down", "mouse_up": "Wheel up"}
+
+
+def key_label(bind):
+    mods = [name for bit, name in MODS if bind["modmask"] & bit]
+    key = KEY_NAMES.get(bind["key"], bind["key"])
+    if key.startswith("XF86"):
+        key = key[4:]
+    return " + ".join(mods + ([key] if key else []))
+
+
+def binds():
+    """Yield (keys, description). Binds with the same description share one row."""
+    out = subprocess.run(["hyprctl", "binds", "-j"], capture_output=True, text=True).stdout
+    rows = {}
+    for b in json.loads(out):
+        text = b.get("description", "")
+        if text:
+            rows.setdefault(text, []).append(key_label(b))
+    for text, keys in rows.items():
+        yield " / ".join(keys), text
+
+
+def strip():
+    items = [f"{keys}  {text[len(HINT):]}" for keys, text in binds() if text.startswith(HINT)]
+    print("     ·     ".join(items))
+
+
+def full():
+    merged = {}  # join hint and normal binds with the same text
+    for keys, text in binds():
+        merged.setdefault(text.removeprefix(HINT), []).append(keys)
+    rows = [(" / ".join(keys), text) for text, keys in merged.items()]
+    width = max(len(k) for k, _ in rows)
+    print("KEYBINDS  (from ~/dotfiles/hypr/keymap.lua)\n")
+    for keys, text in rows:
+        print(f"  {keys.ljust(width)}   {text}")
+    print("\nMouse: drag a title bar to move, drag an edge to resize, double-click a title bar to maximize.")
+
+
+if __name__ == "__main__":
+    {"strip": strip, "full": full}.get(sys.argv[1] if len(sys.argv) > 1 else "full", full)()

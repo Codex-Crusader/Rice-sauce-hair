@@ -1,0 +1,133 @@
+// Taskbar at the bottom (Windows-like). Theme "Amphora".
+{
+    "layer": "top",
+    "position": "bottom",
+    "height": 40,
+    // The hint strip (hint.jsonc) sits in this top margin
+    "margin-top": 22,
+    // Floating island: a gap on the sides and the bottom
+    "margin-left": 14,
+    "margin-right": 14,
+    "margin-bottom": 10,
+    "spacing": 4,
+
+    "modules-left": ["custom/start", "custom/workspace"],
+    "modules-center": ["wlr/taskbar"],
+    "modules-right": ["mpris", "custom/updates", "tray", "pulseaudio", "backlight", "battery",
+                      "power-profiles-daemon", "custom/notifications", "custom/help", "clock"],
+
+    // Active workspace as a numeral. Scroll or click to switch (Lua dispatch syntax).
+    "custom/workspace": {
+        "exec": "~/dotfiles/bin/workspace-indicator",
+        "return-type": "json",
+        "on-click": "hyprctl dispatch 'hl.dsp.focus({ workspace = \"e+1\" })'",
+        "on-click-right": "hyprctl dispatch 'hl.dsp.focus({ workspace = \"e-1\" })'",
+        "on-scroll-up": "hyprctl dispatch 'hl.dsp.focus({ workspace = \"e-1\" })'",
+        "on-scroll-down": "hyprctl dispatch 'hl.dsp.focus({ workspace = \"e+1\" })'"
+    },
+
+    // Now playing (music, videos). Hidden when nothing plays.
+    "mpris": {
+        "format": "{player_icon} {dynamic}",
+        "format-paused": "{status_icon} <i>{dynamic}</i>",
+        "format-stopped": "",
+        "dynamic-len": 28,
+        "dynamic-order": ["title", "artist"],
+        "player-icons": { "default": "󰎆", "chromium": "󰊯", "firefox": "󰈹" },
+        "status-icons": { "paused": "󰏤" },
+        "tooltip-format": "{player}: {title} - {artist}\nClick: play or pause. Scroll: next or previous.",
+        "on-scroll-up": "playerctl previous",
+        "on-scroll-down": "playerctl next"
+    },
+
+    // Pending updates. Hidden when there are none. Click to update everything.
+    "custom/updates": {
+        "exec": "~/dotfiles/bin/updates-count",
+        "return-type": "json",
+        "interval": 1800,
+        "signal": 8,
+        "on-click": "kitty --title 'System update' ~/dotfiles/bin/sysupdate"
+    },
+
+    "custom/start": {
+        "format": "󰣇",
+        "tooltip-format": "Start menu: apps, search, and power buttons (Super).\nRight-click: power menu.",
+        "on-click": "~/dotfiles/bin/start-menu",
+        "on-click-right": "~/dotfiles/bin/power-menu"
+    },
+
+    // No workspace buttons: Waybar 0.15 sends the old hyprctl syntax, which
+    // Hyprland 0.56 (Lua config) rejects. Use Super+1..0 or Super+wheel.
+
+    // Open apps. Click: focus or restore. Middle-click: close.
+    "wlr/taskbar": {
+        "format": "{icon}",
+        "icon-size": 24,
+        "icon-theme": "Papirus-Dark",
+        "tooltip-format": "{title}\nClick: show. Middle-click: close.",
+        "on-click": "activate",
+        "on-click-middle": "close",
+        "ignore-list": ["cheatsheet"]
+    },
+
+    // Wi-Fi (nm-applet) and Bluetooth (blueman) are tray icons
+    "tray": { "icon-size": 18, "spacing": 8 },
+
+
+
+    "pulseaudio": {
+        "format": "{icon} {volume}%",
+        "format-muted": "󰝟",
+        "format-icons": { "headphone": "󰋋", "default": ["󰕿", "󰖀", "󰕾"] },
+        "tooltip-format": "Volume {volume}% on {desc}\nClick: sound settings. Right-click: mute. Scroll: louder or softer.",
+        "on-click": "pavucontrol",
+        "on-click-right": "wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle",
+        "scroll-step": 5
+    },
+
+    "backlight": {
+        "format": "󰃠 {percent}%",
+        "tooltip-format": "Screen brightness {percent}%\nScroll: brighter or darker.",
+        "on-scroll-up": "brightnessctl -e4 -n2 set 5%+",
+        "on-scroll-down": "brightnessctl -e4 -n2 set 5%-"
+    },
+
+    "battery": {
+        "states": { "warning": 25, "critical": 10 },
+        "format": "{icon} {capacity}%",
+        "format-charging": "󰂄 {capacity}%",
+        "format-icons": ["󰁺", "󰁼", "󰁾", "󰂀", "󰁹"],
+        "format-time": "{H} h {M} min",
+        "tooltip-format": "Battery {capacity}%, {timeTo}\nPower draw: {power} W"
+    },
+
+    "power-profiles-daemon": {
+        "format": "{icon}",
+        "tooltip-format": "Power profile: {profile}\nClick: switch between power saver, balanced, performance.",
+        "format-icons": { "performance": "󰓅", "balanced": "󰾅", "power-saver": "󰾆" }
+    },
+
+    "custom/notifications": {
+        "format": "{icon}",
+        "format-icons": { "notification": "󰂚", "none": "󰂜", "dnd-notification": "󰂛", "dnd-none": "󰂛" },
+        "return-type": "json",
+        "exec": "swaync-client -swb",
+        "on-click": "swaync-client -t -sw",
+        "on-click-right": "swaync-client -d -sw",
+        "escape": true
+    },
+
+    "custom/help": {
+        "format": "?",
+        "tooltip-format": "Cheat sheet: all keyboard shortcuts (Super+F1)",
+        "on-click": "~/dotfiles/bin/cheatsheet"
+    },
+
+    "clock": {
+        "format": "{:%H:%M\n%d %b %Y}",
+        "tooltip-format": "<tt>{calendar}</tt>\nScroll on the calendar: change month.",
+        "calendar": { "mode": "month", "on-scroll": 1 },
+        "actions": { "on-scroll-up": "shift_up", "on-scroll-down": "shift_down" },
+        "justify": "center"
+    }
+}

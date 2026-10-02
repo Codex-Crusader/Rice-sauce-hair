@@ -1,0 +1,40 @@
+{
+  "$schema": "/etc/xdg/swaync/configSchema.json",
+  "positionX": "right",
+  "positionY": "bottom",
+  "layer": "overlay",
+  "control-center-layer": "top",
+  "control-center-margin-top": 8,
+  "control-center-margin-bottom": 8,
+  "control-center-margin-right": 8,
+  "control-center-width": 420,
+  "notification-window-width": 400,
+  "timeout": 6,
+  "timeout-low": 4,
+  "timeout-critical": 0,
+  "fit-to-screen": true,
+  "widgets": ["title", "buttons-grid", "volume", "backlight", "dnd", "notifications"],
+  "widget-config": {
+    "title": { "text": "Quick settings", "clear-all-button": true, "button-text": "Clear all" },
+    "dnd": { "text": "Do not disturb" },
+    "volume": { "label": "󰕾" },
+    "backlight": { "label": "󰃠" },
+    "buttons-grid": {
+      "actions": [
+        { "label": "󰖩", "tooltip": "Wi-Fi on or off", "type": "toggle", "active": false,
+          "command": "sh -c '[ \"$SWAYNC_TOGGLE_STATE\" = true ] && nmcli radio wifi on || nmcli radio wifi off'",
+          "update-command": "sh -c 'nmcli radio wifi | grep -q enabled && echo true || echo false'" },
+        { "label": "󰂯", "tooltip": "Bluetooth on or off", "type": "toggle", "active": false,
+          "command": "sh -c '[ \"$SWAYNC_TOGGLE_STATE\" = true ] && bluetoothctl power on || bluetoothctl power off'",
+          "update-command": "sh -c 'bluetoothctl show | grep -q \"Powered: yes\" && echo true || echo false'" },
+        { "label": "󰖔", "tooltip": "Night light now", "type": "toggle", "active": false,
+          "command": "sh -c '[ \"$SWAYNC_TOGGLE_STATE\" = true ] && hyprctl hyprsunset temperature 4500 || hyprctl hyprsunset identity'" },
+        { "label": "󰾆", "tooltip": "Power saver", "command": "powerprofilesctl set power-saver" },
+        { "label": "󰾅", "tooltip": "Balanced", "command": "powerprofilesctl set balanced" },
+        { "label": "󰓅", "tooltip": "Performance", "command": "powerprofilesctl set performance" },
+        { "label": "󰒓", "tooltip": "Settings", "command": "sh -c 'swaync-client -cp; ~/dotfiles/bin/settings-menu'" },
+        { "label": "󰐥", "tooltip": "Power menu", "command": "sh -c 'swaync-client -cp; ~/dotfiles/bin/power-menu'" }
+      ]
+    }
+  }
+}

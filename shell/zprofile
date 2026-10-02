@@ -1,0 +1,3 @@
+# ~/.zprofile: read by zsh login shells (a text login on a tty).
+# PATH is in ~/.zshenv. The graphical login (greetd) sets the GPU in /etc/greetd/regreet.toml.
+[[ -f ~/dotfiles/shell/profile-gpu.sh ]] && source ~/dotfiles/shell/profile-gpu.sh

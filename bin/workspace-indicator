@@ -1,0 +1,24 @@
+#!/usr/bin/env python3
+"""Waybar: show the active workspace as a Roman numeral. Updates on Hyprland events."""
+import json
+import os
+import socket
+import subprocess
+
+ROMAN = ["", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X"]
+
+
+def show():
+    ws = json.loads(subprocess.run(["hyprctl", "activeworkspace", "-j"], capture_output=True, text=True).stdout)
+    n = ws.get("id", 0)
+    text = ROMAN[n] if 0 < n < len(ROMAN) else str(n)
+    print(json.dumps({"text": text, "tooltip": f"Workspace {n}\\nClick: next. Right-click: previous. Scroll: switch."}), flush=True)
+
+
+show()
+path = f'{os.environ["XDG_RUNTIME_DIR"]}/hypr/{os.environ["HYPRLAND_INSTANCE_SIGNATURE"]}/.socket2.sock'
+with socket.socket(socket.AF_UNIX) as s:
+    s.connect(path)
+    for line in s.makefile():
+        if line.startswith(("workspacev2>>", "focusedmonv2>>")):
+            show()

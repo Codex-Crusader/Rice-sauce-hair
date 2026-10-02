@@ -1,0 +1,20 @@
+// Hint strip directly above the taskbar. Super+H hides or shows it.
+// The text comes from ~/dotfiles/bin/keyhints (descriptions in keymap.lua).
+{
+    "layer": "top",
+    "position": "bottom",
+    "height": 22,
+    // Sit in the top margin of the taskbar. A non-exclusive bar starts above the
+    // reserved space, so move it down by its own height.
+    "exclusive": false,
+    "margin-bottom": -22,
+    "margin-left": 14,
+    "margin-right": 14,
+    "modules-center": ["custom/hints"],
+    "custom/hints": {
+        "exec": "~/dotfiles/bin/keyhints strip",
+        "interval": "once",
+        "tooltip": false,
+        "on-click": "~/dotfiles/bin/cheatsheet"
+    }
+}

@@ -1,0 +1,11 @@
+#!/bin/sh
+# Make a new USB audio output the default when it is connected.
+# When it is removed, PipeWire goes back to the speakers by itself.
+pactl subscribe | while read -r line; do
+    case "$line" in
+        *"'new' on sink"*)
+            usb_sink=$(pactl list short sinks | awk '$2 ~ /usb/ {print $2}' | tail -n 1)
+            [ -n "$usb_sink" ] && pactl set-default-sink "$usb_sink"
+            ;;
+    esac
+done

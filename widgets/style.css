@@ -1,0 +1,36 @@
+/* Desktop widgets. Theme "Amphora": colors from ~/dotfiles/theme/palette.sh */
+window.desk { background: transparent; }
+
+.card {
+    background-color: rgba(13, 6, 8, 0.55);
+    border: 1px solid rgba(201, 161, 91, 0.45);
+    border-radius: 18px;
+    padding: 16px 20px;
+    color: #ede6da;
+    font-family: "Noto Sans";
+    box-shadow: 0 6px 18px rgba(0, 0, 0, 0.45);
+}
+
+.heading { font-family: "Cinzel"; font-weight: bold; font-size: 10pt; color: #c9a15b; letter-spacing: 3px; }
+.small   { font-family: "JetBrainsMono Nerd Font"; font-size: 9pt; color: #bf9795; }
+
+.clock { padding: 14px 26px 16px 26px; }
+.clock .time  { font-family: "Cinzel"; font-weight: bold; font-size: 64pt; color: #c9a15b;
+                text-shadow: 0 0 18px rgba(201, 161, 91, 0.35); margin-bottom: -10px; }
+.clock .date  { font-family: "Cinzel"; font-size: 15pt; color: #ede6da; letter-spacing: 2px; }
+.clock .greet { font-size: 11pt; color: #c8a8eb; margin-top: 4px; margin-bottom: 6px; }
+
+.music .title { font-family: "Cinzel"; font-weight: bold; font-size: 11pt; }
+.music .art   { border-radius: 12px; border: 1px solid rgba(201, 161, 91, 0.5); }
+.music progressbar trough   { min-height: 4px; background: rgba(237, 230, 218, 0.15); border-radius: 2px; }
+.music progressbar progress { min-height: 4px; background: #c9a15b; border-radius: 2px; }
+.music button.ctl {
+    font-family: "JetBrainsMono Nerd Font"; font-size: 13pt; color: #ede6da;
+    background: transparent; border: none; box-shadow: none; padding: 2px 10px; border-radius: 10px;
+}
+.music button.ctl:hover { background: rgba(107, 45, 74, 0.7); color: #c9a15b; }
+
+/* No panel behind the card: the wallpaper shows through its white parts (blurred by Hyprland) */
+.heir { padding: 12px; background-color: transparent; border-color: transparent; box-shadow: none; }
+.heir .heading { text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95), 0 0 8px rgba(0, 0, 0, 0.8); }
+.heir .heading { margin-top: 2px; }

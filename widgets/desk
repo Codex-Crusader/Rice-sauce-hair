@@ -1,0 +1,4 @@
+#!/bin/sh
+# Desktop widgets. gtk4-layer-shell must load before GTK, so preload it.
+cd "$(dirname "$0")" || exit 1
+LD_PRELOAD=/usr/lib/libgtk4-layer-shell.so exec -a desk-widgets python3 desk.py

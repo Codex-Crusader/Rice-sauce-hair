@@ -1,0 +1,13 @@
+[Unit]
+Description=Password prompts for apps (hyprpolkitagent)
+PartOf=hypr-desktop.target
+After=hypr-desktop.target
+# Stop trying after 5 failures in 60 s, so a broken part cannot loop forever
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+[Service]
+ExecStart=/usr/lib/hyprpolkitagent/hyprpolkitagent
+Restart=on-failure
+RestartSec=2
+
