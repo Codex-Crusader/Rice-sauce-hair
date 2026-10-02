@@ -1,9 +1,17 @@
 # Rice-sauce-hair
 
-> Say it fast and it sounds like "Chrysos Heir". Read it slowly and it is rice, with sauce, and a hair in it.
-> That is a correct description of this rice.
+Pun for Chrysos Heirs from HSR by HoYoverse and Ricing.
 
-![The desktop](assets/showcase.gif)
+![Arch Linux](https://img.shields.io/badge/Arch_Linux-C9A15B?logo=archlinux&logoColor=white&labelColor=1A1013) ![Hyprland 0.56+](https://img.shields.io/badge/Hyprland-0.56%2B_Lua_config-C9A15B?logo=hyprland&logoColor=white&labelColor=1A1013) ![Wayland](https://img.shields.io/badge/Wayland-C9A15B?logo=wayland&logoColor=white&labelColor=1A1013) ![GTK 4](https://img.shields.io/badge/GTK_4-6B2D4A?logo=gtk&logoColor=white&labelColor=1A1013) ![Python](https://img.shields.io/badge/Python-6B2D4A?logo=python&logoColor=white&labelColor=1A1013) ![Ollama](https://img.shields.io/badge/AI-local_(Ollama)-6B2D4A?logo=ollama&logoColor=white&labelColor=1A1013) ![Status](https://img.shields.io/badge/status-very_glitchy-C0503A?labelColor=1A1013) ![License](https://img.shields.io/badge/license-none-5B6FA8?labelColor=1A1013)
+
+**Desktop tour:** widgets, terminals, launcher, quick settings.
+
+![Desktop tour](assets/showcase.gif)
+
+**Companion demo:** she checks the system, opens the file manager, and searches YouTube.
+(Shown with the author's private persona and sprites. Private parts of the browser are blurred.)
+
+![Companion demo](assets/companion-demo.gif)
 
 A Hyprland desktop for Arch Linux, themed on Amphoreus from Honkai: Star Rail.
 It has desktop widgets, falling golden leaves, and a local AI companion that can open apps,
