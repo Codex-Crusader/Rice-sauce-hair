@@ -1,5 +1,7 @@
 # Rice-sauce-hair
+> Pun between chrysos heir and rice. I know, I am funny.
 
+---
 **An Arch Linux desktop with a local AI companion that does things for you.**
 
 ![Arch Linux](https://img.shields.io/badge/Arch_Linux-C9A15B?logo=archlinux&logoColor=white&labelColor=1A1013) ![Hyprland 0.56+](https://img.shields.io/badge/Hyprland-0.56%2B_Lua_config-C9A15B?logo=hyprland&logoColor=white&labelColor=1A1013) ![Wayland](https://img.shields.io/badge/Wayland-C9A15B?logo=wayland&logoColor=white&labelColor=1A1013) ![GTK 4](https://img.shields.io/badge/GTK_4-6B2D4A?logo=gtk&logoColor=white&labelColor=1A1013) ![Python](https://img.shields.io/badge/Python-6B2D4A?logo=python&logoColor=white&labelColor=1A1013) ![Ollama](https://img.shields.io/badge/AI-local_(Ollama)-6B2D4A?logo=ollama&logoColor=white&labelColor=1A1013) ![Claude Code](https://img.shields.io/badge/hand--off-Claude_Code-6B2D4A?labelColor=1A1013) ![Tests](https://img.shields.io/badge/tests-56_unit_%2B_77_eval-5B6FA8?labelColor=1A1013) ![Status](https://img.shields.io/badge/status-personal_project-C0503A?labelColor=1A1013)
