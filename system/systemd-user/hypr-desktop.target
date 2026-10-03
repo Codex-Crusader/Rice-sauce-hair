@@ -1,0 +1,12 @@
+[Unit]
+Description=Hyprland desktop parts (bars, notifications, desktop icons, companion, tray apps)
+# Hyprland starts this target after it exports WAYLAND_DISPLAY to systemd, and stops it at exit.
+# Bars, notifications, and popups
+Wants=waybar-taskbar.service waybar-hint.service swaync.service swayosd.service
+# Desktop
+Wants=desktop-icons.service desk-widgets.service companion.service
+# Session helpers
+Wants=hypridle-session.service polkit-agent.service night-light.service audio-follow-usb.service
+# Tray apps and clipboard history
+Wants=network-applet.service bluetooth-applet.service udiskie.service
+Wants=clipboard-history-text.service clipboard-history-image.service

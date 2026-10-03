@@ -1,3 +1,6 @@
 #!/bin/sh
 # Clipboard history: select an entry with Rofi, then copy it again.
-cliphist list | rofi -dmenu -i -p "Clipboard" | cliphist decode | wl-copy
+# Esc in Rofi changes nothing (an empty pipe into wl-copy would clear the clipboard).
+choice=$(cliphist list | rofi -dmenu -i -p "Clipboard") || exit 0
+[ -n "$choice" ] || exit 0
+printf '%s\n' "$choice" | cliphist decode | wl-copy

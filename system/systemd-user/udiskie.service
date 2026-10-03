@@ -1,0 +1,11 @@
+[Unit]
+Description=Auto-mount USB drives (udiskie)
+PartOf=hypr-desktop.target
+After=hypr-desktop.target
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+[Service]
+ExecStart=/usr/bin/udiskie --automount --notify --smart-tray
+Restart=on-failure
+RestartSec=2

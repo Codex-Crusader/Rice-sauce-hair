@@ -3,6 +3,7 @@
 Back to the [README](../README.md).
 
 After a change, press **Super+Shift+R** to restart the desktop parts (bars, widgets, companion).
+If you add or move a linked file, add it to `links.txt` and run `link`.
 Hyprland reloads its own config when you save it.
 
 ## Wallpaper
@@ -11,17 +12,17 @@ The public version uses a black screen. To use an image, change it in each of th
 
 | Where | File | Change |
 |---|---|---|
-| Desktop | `pcmanfm-qt/default/settings.conf` | `Wallpaper=/path/to/image.jpg` and `WallpaperMode=zoom` |
-| Lock screen | `hypr/hyprlock.conf` | In `background`: replace the `color` line with `path = /path/to/image.jpg` |
+| Desktop | `apps/pcmanfm-qt/default/settings.conf` | `Wallpaper=/path/to/image.jpg` and `WallpaperMode=zoom` |
+| Lock screen | `desktop/hypr/hyprlock.conf` | In `background`: replace the `color` line with `path = /path/to/image.jpg` |
 | Login screen | `/etc/greetd/regreet.toml` | Remove the `#` from the `[background]` lines, set `path` (the image must be readable by the `greeter` user, for example in `/usr/share/backgrounds/`) |
-| GRUB | `grub/amphora/background.png` | Run `~/dotfiles/bin/grub-background /path/to/image.jpg` |
+| GRUB | `theme/grub/amphora/background.png` | Run `~/dotfiles/bin/grub-background /path/to/image.jpg` |
 
 You can also right-click the desktop, then **Desktop Preferences**.
 
 ## The companion's face (sprite sheet)
 
 The companion shows one picture for each mood. The placeholder pictures are in
-`~/.local/share/castorice/avatar/`. Replace them with your own:
+`~/.local/share/companion/avatar/`. Replace them with your own:
 
 | File | When it shows |
 |---|---|
@@ -46,27 +47,28 @@ magick sheet.png -crop 2x2@ +repage -alpha set -fuzz 8% -fill none \
 
 Then rename `face-0.png` to `face-3.png` to the mood names. Check each result.
 
-## Chrysos Heir cards (artwork)
+## Art cards (artwork)
 
-Put your card images in `~/Pictures/chrysos-cards/`. Until you do, the widget shows "artwork here".
+Put your card images in `~/Pictures/art-cards/`. Until you do, the widget shows "artwork here".
 
-- PNG files. The file name is the caption: `castorice.png` shows **CASTORICE**. Use `-` for spaces.
+- PNG, JPG, or WebP files. The file name is the caption: `night-owl.png` shows **NIGHT OWL**. Use `-` for spaces.
 - Tall cards look best: a width-to-height ratio of about 0.57 (for example 455 x 786).
 - The desktop widget shows a random card and changes it every 5 minutes. Click it for the next card.
 - Each new terminal window shows a random card next to the system information (fastfetch).
-- `bin/soften-cards` makes a copy of each card in `~/.cache/chrysos-cards/` with see-through white parts.
+- `bin/soften-cards` makes a copy of each card in `~/.cache/art-cards/` with see-through white parts.
   It runs when the widgets start. To change how see-through they are, edit the numbers in that script,
-  then delete `~/.cache/chrysos-cards/` and restart the widgets.
+  then delete `~/.cache/art-cards/` and restart the widgets.
 
 ## Colors
 
 The palette is in `theme/palette.sh`. Change a color there first. Then change the same value in the files
-that use it: `waybar/*.css`, `widgets/style.css`, `gtk/colors.css` (and `gtk/gtk-3.0.css`, `gtk/gtk-4.0.css`),
-`swaync/style.css`, `rofi/`, `kitty/`, `qt6ct/colors/`, `hypr/hyprland.lua` (borders), `companion/ui.py` (bubble).
+that use it: `desktop/waybar/*.css`, `desktop/widgets/style.css`, `theme/gtk/colors.css` (and `theme/gtk/gtk-3.0.css`,
+`theme/gtk/gtk-4.0.css`), `desktop/swaync/style.css`, `desktop/rofi/`, `apps/kitty/`, `theme/qt6ct/colors/`,
+`desktop/hypr/hyprland.lua` (borders), `companion/ui.py` (bubble). To find them all: `git grep palette.sh`.
 
 ## Keys
 
-All keys are in `hypr/keymap.lua`. Each key has a description. The descriptions also make the
+All keys are in `desktop/hypr/keymap.lua`. Each key has a description. The descriptions also make the
 hint strip above the taskbar and the cheat sheet (**Super+F1**).
 
 - `hint = true` puts a key in the hint strip.
@@ -74,7 +76,7 @@ hint strip above the taskbar and the cheat sheet (**Super+F1**).
 
 ## Desktop widgets
 
-The widgets are in `widgets/desk.py` (one class for each widget) and `widgets/style.css`.
+The widgets are in `desktop/widgets/desk.py` (one class for each widget) and `desktop/widgets/style.css`.
 
 | To change | Where |
 |---|---|
@@ -88,5 +90,5 @@ The leaves move only when no window is open on the workspace, and not in the pow
 
 ## Terminal greeting
 
-`fastfetch/config.jsonc` sets the information lines. `shell/zshrc` (at the end) picks the card.
+`apps/fastfetch/config.jsonc` sets the information lines. `shell/zshrc` (at the end) picks the card.
 To turn the greeting off, remove that part of `shell/zshrc`.

@@ -1,5 +1,5 @@
--- Hyprland SAFE MODE. A minimal config that does not depend on ~/dotfiles/hypr,
--- the hyprbars plugin, the bars, or Castorice. Installed to /usr/local/share/hyprland-safe/.
+-- Hyprland SAFE MODE. A minimal config that does not depend on ~/dotfiles/desktop/hypr,
+-- the hyprbars plugin, the bars, or Companion. Installed to /usr/local/share/hyprland-safe/.
 -- Use it from the login screen ("Hyprland (safe mode)") when the normal session fails.
 
 hl.monitor({ output = "", mode = "preferred", position = "auto", scale = "auto" })

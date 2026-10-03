@@ -1,6 +1,6 @@
-// Castorice Tabs: a local bridge between Chrome and the Castorice companion.
+// Companion Tabs: a local bridge between Chrome and the Companion companion.
 // It connects only to ws://127.0.0.1:8765 and sends the token from token.js first.
-importScripts("token.js"); // defines CASTORICE_TOKEN (made by setup.sh)
+importScripts("token.js"); // defines COMPANION_TOKEN (made by setup.sh)
 
 const URL = "ws://127.0.0.1:8765";
 let socket = null;
@@ -34,7 +34,7 @@ const commands = {
 function connect() {
   if (socket && socket.readyState <= WebSocket.OPEN) return;
   socket = new WebSocket(URL);
-  socket.onopen = () => socket.send(CASTORICE_TOKEN);
+  socket.onopen = () => socket.send(COMPANION_TOKEN);
   socket.onmessage = async (event) => {
     const { id, cmd, args } = JSON.parse(event.data);
     let result;

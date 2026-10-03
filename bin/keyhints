@@ -3,7 +3,7 @@
 
   keyhints strip   one line with the [hint] binds, for the hint strip
   keyhints full    all binds with a description, for the cheat sheet
-The descriptions come from ~/dotfiles/hypr/keymap.lua.
+The descriptions come from ~/dotfiles/desktop/hypr/keymap.lua.
 """
 import json
 import subprocess
@@ -29,8 +29,12 @@ def key_label(bind):
 def binds():
     """Yield (keys, description). Binds with the same description share one row."""
     out = subprocess.run(["hyprctl", "binds", "-j"], capture_output=True, text=True).stdout
+    try:
+        all_binds = json.loads(out)
+    except ValueError:  # Hyprland is not running, or gave no output
+        all_binds = []
     rows = {}
-    for b in json.loads(out):
+    for b in all_binds:
         text = b.get("description", "")
         if text:
             rows.setdefault(text, []).append(key_label(b))
@@ -48,8 +52,11 @@ def full():
     for keys, text in binds():
         merged.setdefault(text.removeprefix(HINT), []).append(keys)
     rows = [(" / ".join(keys), text) for text, keys in merged.items()]
+    if not rows:
+        print("No keybinds found. Is Hyprland running?")
+        return
     width = max(len(k) for k, _ in rows)
-    print("KEYBINDS  (from ~/dotfiles/hypr/keymap.lua)\n")
+    print("KEYBINDS  (from ~/dotfiles/desktop/hypr/keymap.lua)\n")
     for keys, text in rows:
         print(f"  {keys.ljust(width)}   {text}")
     print("\nMouse: drag a title bar to move, drag an edge to resize, double-click a title bar to maximize.")

@@ -10,14 +10,20 @@ if ! sudo pacman -Syu; then
 fi
 echo; echo "== 2/3 Title bar plugin"
 if [ "$before_hypr" != "$(pacman -Q hyprland)" ]; then
-    hyprpm update && relogin=yes
+    relogin=yes
+    if ! hyprpm update; then
+        echo "WARNING: hyprpm update failed. The title bars can be missing after the next login."
+        echo "Run 'hyprpm update' again, then log out and in. See docs/RECOVERY.md."
+        hyprpm_failed=yes
+    fi
 else
     echo "Hyprland did not change. Nothing to do."
 fi
 echo; echo "== 3/3 Flatpak apps"
-flatpak update -y
+flatpak update -y || echo "WARNING: the Flatpak update failed."
 echo; echo "== Done"
 [ "$before_kernel" != "$(pacman -Q linux linux-lts 2>/dev/null)" ] && echo "A new kernel is installed: reboot when you can."
+[ -n "${hyprpm_failed:-}" ] && echo "hyprpm update FAILED: run it again before you log out."
 [ -n "${relogin:-}" ] && echo "Hyprland was updated: log out and in to use the new version and plugin."
 pkill -RTMIN+8 waybar  # refresh the update badge
 read -rp "Press Enter to close."

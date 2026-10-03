@@ -1,5 +1,6 @@
 #!/bin/bash
 # Quick system health check. Prints one line per check: OK or WARN.
+# A check runs only when its part is on this machine (NVIDIA driver, Ollama, GRUB, grub-btrfs, a git upstream).
 #   health           print all checks
 #   health --notify  print, and send one notification if anything is wrong
 problems=()
@@ -11,7 +12,11 @@ failed=$(systemctl --failed --no-legend --plain | awk '{print $1}' | tr '\n' ' '
 failed=$(systemctl --user --failed --no-legend --plain | awk '{print $1}' | tr '\n' ' ')
 [ -z "$failed" ] && ok "no failed user services" || warn "failed user services: $failed"
 
-lspci -d 10de: | grep -qi vga && ok "NVIDIA GPU present" || warn "NVIDIA GPU missing (do a full shutdown, not a restart)"
+has() { pacman -Qq "$1" >/dev/null 2>&1; }
+
+if has nvidia-utils; then
+    lspci -d 10de: | grep -qi vga && ok "NVIDIA GPU present" || warn "NVIDIA GPU missing (do a full shutdown, not a restart)"
+fi
 
 if [ -n "$HYPRLAND_INSTANCE_SIGNATURE" ]; then
     errors=$(hyprctl configerrors | grep -v '^$')
@@ -23,7 +28,9 @@ fi
 used=$(df --output=pcent / | tail -1 | tr -dc 0-9)
 [ "$used" -lt 85 ] && ok "disk / ${used}% used" || warn "disk / is ${used}% full"
 
-systemctl is-active --quiet ollama && ok "Ollama running" || warn "Ollama service is not running"
+if command -v ollama >/dev/null; then
+    systemctl is-active --quiet ollama && ok "Ollama running" || warn "Ollama service is not running"
+fi
 
 if command -v checkupdates >/dev/null; then
     n=$(checkupdates 2>/dev/null | wc -l)
@@ -32,15 +39,24 @@ fi
 
 n=$(git -C ~/dotfiles status --porcelain 2>/dev/null | wc -l)
 [ "$n" -eq 0 ] && ok "dotfiles committed" || warn "$n uncommitted changes in ~/dotfiles"
-n=$(git -C ~/dotfiles log --oneline @{u}..HEAD 2>/dev/null | wc -l)
-[ "$n" -eq 0 ] && ok "dotfiles pushed to GitHub" || warn "$n commits not pushed to GitHub (run: git -C ~/dotfiles push)"
+if git -C ~/dotfiles rev-parse --abbrev-ref @{u} >/dev/null 2>&1; then
+    n=$(git -C ~/dotfiles log --oneline @{u}..HEAD | wc -l)
+    [ "$n" -eq 0 ] && ok "dotfiles pushed" || warn "$n commits not pushed (run: git -C ~/dotfiles push)"
+fi
+~/dotfiles/bin/link --check >/dev/null 2>&1 && ok "dotfiles links correct" || warn "dotfiles links are wrong (run: link --check, then link)"
 
 # Boot: GRUB must be first, or the laptop starts Windows directly (Windows updates can change this)
-first=$(efibootmgr 2>/dev/null | awk -F'[ ,]' '/^BootOrder/ {print $2}')
-efibootmgr 2>/dev/null | grep -q "^Boot${first}\* GRUB" && ok "GRUB is first in the boot order" \
-    || warn "GRUB is not first in the boot order (see docs/RECOVERY.md; fix with: sudo efibootmgr -o <GRUB>,<others>)"
-grep -q 'grub-btrfs-overlayfs' /etc/mkinitcpio.conf && ok "snapshots can boot (overlayfs hook)" \
-    || warn "snapshot boot hook missing in /etc/mkinitcpio.conf"
+boot=$(efibootmgr 2>/dev/null)
+grub=$(echo "$boot" | sed -n 's/^Boot\([0-9A-F]\{4\}\)\* GRUB.*/\1/p' | head -1)
+if [ -n "$grub" ]; then
+    order=$(echo "$boot" | awk '/^BootOrder/ {print $2}')
+    [ "${order%%,*}" = "$grub" ] && ok "GRUB is first in the boot order" \
+        || warn "GRUB is not first in the boot order (fix: sudo efibootmgr -o $grub,$(echo ",$order," | sed "s/,$grub,/,/" | sed 's/^,//; s/,$//'))"
+fi
+if has grub-btrfs; then
+    grep -q 'grub-btrfs-overlayfs' /etc/mkinitcpio.conf && ok "snapshots can boot (overlayfs hook)" \
+        || warn "snapshot boot hook missing in /etc/mkinitcpio.conf"
+fi
 
 # Virus signatures older than 3 days: the daily update stopped
 sig=$(stat -c %Y /var/lib/clamav/daily.cvd /var/lib/clamav/daily.cld 2>/dev/null | sort -n | tail -1)

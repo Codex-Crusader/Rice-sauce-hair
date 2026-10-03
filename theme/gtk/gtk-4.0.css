@@ -1,0 +1,32 @@
+/* Theme colors. A copy of ~/dotfiles/theme/gtk/colors.css (GTK cannot import with a relative path here). */
+/* GTK colors "Amphora" for adw-gtk3 (GTK 3) and libadwaita (GTK 4).
+   Both read these named colors. Values from ~/dotfiles/theme/palette.sh. */
+
+@define-color accent_color       #c9a15b;
+@define-color accent_bg_color    #8f4a6b;
+@define-color accent_fg_color    #ede6da;
+
+@define-color window_bg_color    #0d0608;
+@define-color window_fg_color    #ede6da;
+@define-color view_bg_color      #1a1013;
+@define-color view_fg_color      #ede6da;
+
+@define-color headerbar_bg_color       #1a1013;
+@define-color headerbar_fg_color       #ede6da;
+@define-color headerbar_backdrop_color #0d0608;
+@define-color headerbar_border_color   #c9a15b;
+
+@define-color sidebar_bg_color   #120a0d;
+@define-color sidebar_fg_color   #ede6da;
+@define-color card_bg_color      #1a1013;
+@define-color card_fg_color      #ede6da;
+@define-color dialog_bg_color    #1a1013;
+@define-color dialog_fg_color    #ede6da;
+@define-color popover_bg_color   #1a1013;
+@define-color popover_fg_color   #ede6da;
+
+@define-color destructive_bg_color #c0503a;
+@define-color destructive_color    #e07a62;
+@define-color error_color          #e07a62;
+@define-color warning_color        #d66a2a;
+@define-color success_color        #a9b878;

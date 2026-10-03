@@ -1,10 +1,7 @@
 # Generated files
 __pycache__/
-pcmanfm-qt/default/recent-files.conf
-# Your companion persona (copy companion/persona.example.toml)
-companion/persona.toml
-
-# Synced by Claude Code from the account; changes on its own
-skills/synced/
+apps/pcmanfm-qt/default/recent-files.conf
 # pcmanfm-qt runtime lock
-pcmanfm-qt/default/*.lock
+apps/pcmanfm-qt/default/*.lock
+# Your companion persona (install.sh copies companion/persona.example.toml)
+companion/persona.toml

@@ -1,0 +1,11 @@
+[Unit]
+Description=Desktop widgets (clock, vitals, music, art cards, golden leaves)
+PartOf=hypr-desktop.target
+After=hypr-desktop.target
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+[Service]
+ExecStart=%h/dotfiles/desktop/widgets/desk
+Restart=on-failure
+RestartSec=2

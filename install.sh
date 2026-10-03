@@ -1,8 +1,11 @@
 #!/bin/sh
-# Link the configs into your home folder. Read docs/INSTALL.md first.
-# - Does not install packages and does not change /etc (see docs/INSTALL.md for those steps).
-# - A file or folder that is in the way is moved to ~/.config-backup-<date>/, not deleted.
-# - Safe to run again.
+# Set up this desktop in your home folder. Read docs/INSTALL.md first.
+#   sh install.sh           make the links, the Qt color setting, the example persona, the placeholder faces
+#   sh install.sh --check   a dry run: show what would be linked, change nothing
+#   sh install.sh --remove  remove the links again (your own files stay)
+# It never moves or deletes your files: a file in the way is reported, and you decide.
+# It does not install packages and does not change /etc or /boot (see docs/INSTALL.md for those steps).
+# Safe to run again.
 set -eu
 
 REPO="$HOME/dotfiles"
@@ -12,57 +15,25 @@ if [ "$HERE" != "$REPO" ]; then
     exit 1
 fi
 
-BACKUP="$HOME/.config-backup-$(date +%Y%m%d-%H%M%S)"
+case "${1:-}" in
+    --check)  exec bash "$REPO/bin/link" --check ;;
+    --remove) exec bash "$REPO/bin/link" --remove ;;
+    "") ;;
+    *) echo "Usage: sh install.sh [--check | --remove]" >&2; exit 1 ;;
+esac
 
-# link <file in repo> <target in home>
-link() {
-    src="$REPO/$1"
-    dst="$2"
-    mkdir -p "$(dirname "$dst")"
-    if [ -L "$dst" ] && [ "$(readlink "$dst")" = "$src" ]; then
-        return  # already linked
-    fi
-    if [ -e "$dst" ] || [ -L "$dst" ]; then
-        mkdir -p "$BACKUP"
-        mv "$dst" "$BACKUP/"
-        echo "saved old $dst in $BACKUP/"
-    fi
-    ln -s "$src" "$dst"
-    echo "linked $dst"
-}
+if ! bash "$REPO/bin/link"; then
+    echo
+    echo "Some links were not made: see the SKIP lines. Move those files away, then run install.sh again."
+fi
 
-# Shell
-link shell/zshrc        "$HOME/.zshrc"
-link shell/zshenv       "$HOME/.zshenv"
-link shell/zprofile     "$HOME/.zprofile"
-link shell/bash_profile "$HOME/.bash_profile"
-
-# Apps (whole folders)
-for dir in hypr waybar kitty rofi swaync nwg-drawer pcmanfm-qt qt6ct fastfetch; do
-    link "$dir" "$HOME/.config/$dir"
-done
-link gtk/gtk-3.0.css    "$HOME/.config/gtk-3.0/gtk.css"
-link gtk/settings.ini   "$HOME/.config/gtk-3.0/settings.ini"
-link gtk/gtk-4.0.css    "$HOME/.config/gtk-4.0/gtk.css"
-
-# Desktop parts as user services (started by Hyprland through hypr-desktop.target)
-for unit in "$REPO"/systemd/user/*.service "$REPO"/systemd/user/*.target "$REPO"/systemd/user/*.d; do
-    name="$(basename "$unit")"
-    link "systemd/user/$name" "$HOME/.config/systemd/user/$name"
-done
-
-# Scripts, fonts, file manager actions
-link bin/health          "$HOME/.local/bin/health"
-link bin/sysupdate       "$HOME/.local/bin/sysupdate"
-link fonts/cinzel        "$HOME/.local/share/fonts/cinzel"
-link file-manager-actions "$HOME/.local/share/file-manager/actions"
-
-# Qt needs an absolute path to its color file
-sed -i "s|@HOME@|$HOME|g" "$REPO/qt6ct/qt6ct.conf"
+# Qt needs an absolute path to its colors. Written into ~/.config, so the repo stays clean.
+mkdir -p "$HOME/.config/qt6ct"
+[ -e "$HOME/.config/qt6ct/qt6ct.conf" ] || sed "s|@HOME@|$HOME|g" "$REPO/theme/qt6ct/qt6ct.conf" > "$HOME/.config/qt6ct/qt6ct.conf"
 
 # Companion: your persona and the placeholder faces (only when you have none yet)
 [ -f "$REPO/companion/persona.toml" ] || cp "$REPO/companion/persona.example.toml" "$REPO/companion/persona.toml"
-AVATAR="$HOME/.local/share/castorice/avatar"
+AVATAR="$HOME/.local/share/companion/avatar"
 if [ ! -d "$AVATAR" ] || [ -z "$(ls -A "$AVATAR")" ]; then
     mkdir -p "$AVATAR"
     cp "$REPO"/assets/placeholders/avatar/*.png "$AVATAR/"
@@ -70,7 +41,7 @@ if [ ! -d "$AVATAR" ] || [ -z "$(ls -A "$AVATAR")" ]; then
 fi
 
 # Folder for your card artwork
-mkdir -p "$HOME/Pictures/chrysos-cards"
+mkdir -p "$HOME/Pictures/art-cards"
 
 command -v systemctl >/dev/null && systemctl --user daemon-reload || true
 fc-cache -f >/dev/null 2>&1 || true

@@ -8,9 +8,8 @@ Start at the top: the first steps are the safest.
 
 1. Press **Super+Shift+R**. This restarts the bars, notifications, desktop icons, widgets, and the companion.
 2. Open Kitty (**Super+Enter**) and run `health`. Each `WARN` line names a problem.
-   (Some warnings are about the author's system, see [Known issues](KNOWN-ISSUES.md).)
-3. See which part failed: `systemctl --user status hypr-desktop.target`, then
-   `journalctl --user -u <part> -n 50` (for example `desk-widgets` or `castorice`).
+   3. See which part failed: `systemctl --user status hypr-desktop.target`, then
+   `journalctl --user -u <part> -n 50` (for example `desk-widgets` or `companion`).
 
 ## The title bars are gone
 
@@ -23,8 +22,8 @@ The title bar plugin must match the Hyprland version. Run `hyprpm update`, then 
 2. Check the normal config: `Hyprland --verify-config`.
 3. If nothing works: press **Ctrl+Alt+F2**, log in as text, and run `sudo systemctl disable greetd`.
    Reboot. Log in on the text console and type `Hyprland`.
-4. To undo this setup completely: remove the links that `install.sh` made, and move your old files back from
-   `~/.config-backup-<date>/`.
+4. To undo this setup completely: run `sh ~/dotfiles/install.sh --remove`. It removes only the links that
+   point into the repo. Then put your own config files back.
 
 ## An update broke something
 
@@ -38,6 +37,13 @@ If you use snapper with snap-pac, every pacman run makes a snapshot before and a
 
 1. Shut down fully (not restart). Wait 10 seconds, then start again.
 2. If it is still missing, check the firmware setup for a graphics mode setting, and set it to hybrid.
+
+## The companion does something wrong
+
+1. Right-click her face, then **Stop what she is doing**.
+2. Read her log: right-click her face, then **Open her log** (`~/.cache/companion/brain.log`).
+   Each request shows her decision, each step, and the result.
+3. To turn her off until you want her back: `companion-switch off`.
 
 ## The desktop froze
 

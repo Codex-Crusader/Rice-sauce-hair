@@ -22,13 +22,15 @@ if (( $+commands[carapace] )); then
 fi
 
 # fzf-tab: Tab opens an fzf popup list. Load after compinit, before the widget plugins.
-[[ -f ~/dotfiles/zsh/fzf-tab/fzf-tab.plugin.zsh ]] && source ~/dotfiles/zsh/fzf-tab/fzf-tab.plugin.zsh
+[[ -f ~/dotfiles/shell/fzf-tab/fzf-tab.plugin.zsh ]] && source ~/dotfiles/shell/fzf-tab/fzf-tab.plugin.zsh
 zstyle ':fzf-tab:*' fzf-flags --height=40% --border=rounded
 zstyle ':fzf-tab:*' switch-group '<' '>'
 
 # Plugins from the official repos. syntax-highlighting must be last.
-source /usr/share/zsh/plugins/zsh-autosuggestions/zsh-autosuggestions.zsh
-source /usr/share/zsh/plugins/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
+# A missing plugin must not break the shell: source only the files that exist.
+for plugin in zsh-autosuggestions zsh-syntax-highlighting; do
+  [[ -f /usr/share/zsh/plugins/$plugin/$plugin.zsh ]] && source /usr/share/zsh/plugins/$plugin/$plugin.zsh
+done
 
 
 # Simple prompt: user@host dir %
@@ -36,12 +38,12 @@ PROMPT='%F{yellow}%n@%m%f %F{blue}%~%f %# '
 
 # fastfetch greeting: only in a new Kitty window, not for commands (zsh -c) or other terminals
 if [[ $TERM == xterm-kitty && -z $ZSH_EXECUTION_STRING && $(ps -o comm= -p $PPID) == kitty ]]; then
-  # A random Chrysos Heir card as the logo; the Arch logo (config.jsonc) when there are no cards.
+  # A random art card card as the logo; the Arch logo (config.jsonc) when there are no cards.
   # The see-through copy (bin/soften-cards, made by the desktop widgets) when it exists.
-  cards=(~/Pictures/chrysos-cards/*.png(N))
+  cards=(~/Pictures/art-cards/*.(png|jpg|jpeg|webp)(N))
   if (( $#cards )); then
     card=${cards[RANDOM % $#cards + 1]}
-    [[ -f ~/.cache/chrysos-cards/${card:t} ]] && card=~/.cache/chrysos-cards/${card:t}
+    [[ -f ~/.cache/art-cards/${card:t:r}.png ]] && card=~/.cache/art-cards/${card:t:r}.png
     # 19 x 14 cells matches the card ratio (0.57) with Kitty's 9 x 21 px cells
     fastfetch --logo $card --logo-width 19 --logo-height 14 --logo-preserve-aspect-ratio true
   else

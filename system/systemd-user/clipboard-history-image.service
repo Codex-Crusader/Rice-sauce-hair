@@ -1,0 +1,11 @@
+[Unit]
+Description=Clipboard history for images (cliphist)
+PartOf=hypr-desktop.target
+After=hypr-desktop.target
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+[Service]
+ExecStart=/usr/bin/wl-paste --type image --watch cliphist store
+Restart=on-failure
+RestartSec=2

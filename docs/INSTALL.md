@@ -18,11 +18,12 @@ Do a full update together with the install. Do not do partial updates on Arch.
 ```sh
 sudo pacman -Syu --needed \
   hyprland hyprlock hypridle hyprsunset hyprpolkitagent xdg-desktop-portal-hyprland \
-  waybar kitty rofi rofi-emoji swaync swayosd nwg-drawer pcmanfm-qt qt6ct mission-center \
+  waybar kitty rofi rofi-emoji swaync swayosd nwg-drawer nwg-look pcmanfm-qt qt6ct mission-center \
   adw-gtk-theme papirus-icon-theme noto-fonts noto-fonts-emoji ttf-jetbrains-mono-nerd \
   zsh zsh-autosuggestions zsh-syntax-highlighting fzf fd less \
-  cliphist wl-clipboard grim slurp satty playerctl brightnessctl \
-  pipewire wireplumber pavucontrol networkmanager network-manager-applet blueman bluez udiskie \
+  cliphist wl-clipboard grim slurp satty playerctl brightnessctl libnotify xdg-utils \
+  pipewire pipewire-pulse libpulse wireplumber pavucontrol \
+  networkmanager network-manager-applet blueman bluez udiskie efibootmgr \
   power-profiles-daemon gtk4-layer-shell python-gobject python-websockets \
   fastfetch imagemagick flatpak git cmake meson cpio pkgconf gcc
 ```
@@ -46,16 +47,22 @@ Optional: `carapace-bin` (from the AUR) gives better Tab completion. The shell w
 
 ```sh
 git clone --recurse-submodules https://github.com/Codex-Crusader/Rice-sauce-hair ~/dotfiles
-~/dotfiles/install.sh
+sh ~/dotfiles/install.sh --check   # a dry run: what would be linked, and what is in the way
+sh ~/dotfiles/install.sh
 chsh -s /usr/bin/zsh
 ```
 
-`install.sh` links the configs into `~/.config` and your home folder. It moves files that are in the way
-to `~/.config-backup-<date>/`. It does not delete files. It also:
+`install.sh` makes the links that `links.txt` lists (with `bin/link`). It never moves or deletes a file:
+when a real file is in the way, it shows a `SKIP` line. Move that file away yourself, then run it again.
+It also:
 
+- writes `~/.config/qt6ct/qt6ct.conf` (Qt needs an absolute path to its colors),
 - makes `companion/persona.toml` from `persona.example.toml`,
-- puts the placeholder faces in `~/.local/share/castorice/avatar/`,
-- makes the card folder `~/Pictures/chrysos-cards/`.
+- puts the placeholder faces in `~/.local/share/companion/avatar/`,
+- makes the card folder `~/Pictures/art-cards/`.
+
+To undo: `sh ~/dotfiles/install.sh --remove`. It removes only the links that point into the repo.
+To check the links later: `link --check` (the `health` command does this too).
 
 ## 4. Title bars (hyprbars plugin)
 
@@ -80,12 +87,16 @@ After each Hyprland update, run `hyprpm update` (or `sysupdate`, which does it f
    ```sh
    ~/dotfiles/companion/setup.sh
    mkdir -p ~/.local/share/flatpak/overrides
-   cp ~/dotfiles/flatpak/com.google.Chrome.override ~/.local/share/flatpak/overrides/com.google.Chrome
+   cp ~/dotfiles/apps/flatpak/com.google.Chrome.override ~/.local/share/flatpak/overrides/com.google.Chrome
    ```
    Then in Chrome: open `chrome://extensions`, turn on **Developer mode**, click **Load unpacked**,
    and select `~/dotfiles/companion/chrome-extension`.
-4. Hand-off to Claude Code (optional): install the `claude` command line tool. Without it, the companion
-   cannot hand big tasks over, and it tells you so.
+4. Hand-off to Claude Code (optional): install the `claude` command line tool and log in once.
+   Without it, she tells you that she cannot hand a task over. A hand-off sends a short brief to Anthropic:
+   read the privacy part of [How the companion works](../companion/README.md).
+5. Test her: `cd ~/dotfiles/companion && python3 -m unittest discover -s tests -p 'test_*.py'`.
+
+To turn her off: `companion-switch off`. She stays off after a new login. `companion-switch on` starts her again.
 
 ## 6. First start
 
@@ -120,7 +131,7 @@ sudo install -Dm644 ~/dotfiles/system/safe-mode/hyprland-safe.desktop /usr/share
 ### GRUB theme
 
 ```sh
-sudo cp -r ~/dotfiles/grub/amphora /boot/grub/themes/
+sudo cp -r ~/dotfiles/theme/grub/amphora /boot/grub/themes/
 # In /etc/default/grub: GRUB_THEME="/boot/grub/themes/amphora/theme.txt"
 sudo grub-mkconfig -o /boot/grub/grub.cfg
 ```

@@ -1,29 +1,27 @@
-"""Castorice's mood, her sense of time, and the saved conversation.
+"""The companion's mood, her sense of time, and the saved conversation.
 
-Kept in ~/.local/share/castorice/state.json, so they survive a restart.
+Kept by the store (state.json in the data folder), so they survive a restart.
 The mood changes slowly: with the hour, with how the user talks to her, and with
 what she finds on the system. It fades back to the time-of-day mood after two hours.
 """
-import json
 import re
 import time
-from pathlib import Path
 
-STATE_FILE = Path.home() / ".local/share/castorice/state.json"
 FADE_SECONDS = 2 * 3600
 
-WARM = re.compile(r"\b(thank|thanks|thx|love|cute|good job|well done|great|awesome|nice|sweet|kind)\b|❤|🥰|😊|🦋", re.I)
+WARM = re.compile(r"\b(thank|thanks|thx|love|cute|good job|well done|great|awesome|nice|sweet|kind(?! of))\b|❤|🥰|😊|🦋", re.I)
 HARSH = re.compile(r"\b(stupid|useless|dumb|shut up|idiot|hate you)\b", re.I)
 PLAYFUL = re.compile(r"\b(haha|lol|lmao|tease|joke|silly)\b|😂|😜|😏", re.I)
 
-# How each mood colors her words. One line each, so the prompt stays short.
+# How each mood colors her words. One line each, so the prompt stays short. {user} is the user's name.
+# persona.toml can replace any line in a [moods] table.
 MOODS = {
     "calm": "calm and gentle",
     "cheerful": "light and warm; a small smile in your words",
     "playful": "playful; you tease gently and enjoy the banter",
-    "sleepy": "drowsy and soft-spoken; you worry a little that the user is awake so late",
-    "worried": "anxious underneath your composure; something on the system or with the user troubles you",
-    "wistful": "quietly wistful; thoughts of Aidonia's snow and of people you have outlived drift by",
+    "sleepy": "drowsy and soft-spoken; you worry a little that {user} is awake so late",
+    "worried": "anxious underneath your composure; something on the system or with {user} troubles you",
+    "wistful": "quietly wistful; old memories drift by",
     "hurt": "hurt, though you hide it behind politeness; you stay kind but a little distant",
 }
 
@@ -47,11 +45,11 @@ def ago(seconds):
 
 
 class Mood:
-    def __init__(self):
-        try:
-            self.state = json.loads(STATE_FILE.read_text())
-        except (OSError, json.JSONDecodeError):
-            self.state = {}
+    def __init__(self, store, user="the user", moods=None):
+        self.store = store
+        self.user = user
+        self.moods = {**MOODS, **(moods or {})}
+        self.state = store.state()
         self.state.setdefault("history", [])
         self.previous_visit = self.state.get("last_seen")  # for the greeting after a restart
 
@@ -63,16 +61,17 @@ class Mood:
     def note_user(self, text):
         self.state["last_seen"] = time.time()
         if HARSH.search(text):
-            self.set("hurt", "The user spoke harshly to you")
+            self.set("hurt", f"{self.user} spoke harshly to you")
         elif WARM.search(text):
-            self.set("cheerful", "The user was kind to you")
+            self.set("cheerful", f"{self.user} was kind to you")
         elif PLAYFUL.search(text):
-            self.set("playful", "The user is joking with you")
+            self.set("playful", f"{self.user} is joking with you")
 
     def note_result(self, result):
         """Problems found by a tool worry her; a fix makes her cheerful again."""
         text = str(result)
-        if re.search(r"\bWARN\b|FOUND|failed|error", text) and "no errors" not in text:
+        # whole words at the start of a line or after a colon, so a file named error.log does not count
+        if re.search(r"(^|:\s*)(WARN|FAIL|failed|error)\b|\bFOUND$", text, re.M) and "no errors" not in text:
             self.set("worried", "you just found a problem on the system")
 
     # ----- what she reads -----
@@ -85,13 +84,13 @@ class Mood:
 
     def describe(self):
         mood, reason = self.current()
-        return f"Your mood right now: {mood} ({reason}). Let it color your words: {MOODS.get(mood, mood)}."
+        return f"Your mood right now: {mood} ({reason}). Let it color your words: {self.moods.get(mood, mood).format(user=self.user)}."
 
     def away_text(self):
         """How long the user was away before this session, for the greeting."""
         if not self.previous_visit:
-            return "This is the first time you meet the user here."
-        return f"The user was last here {ago(time.time() - self.previous_visit)} ago."
+            return f"This is the first time you meet {self.user} here."
+        return f"{self.user} was last here {ago(time.time() - self.previous_visit)} ago."
 
     # ----- saved conversation -----
 
@@ -100,5 +99,4 @@ class Mood:
 
     def save(self, history):
         self.state["history"] = history[-16:]
-        STATE_FILE.parent.mkdir(parents=True, exist_ok=True)
-        STATE_FILE.write_text(json.dumps(self.state, ensure_ascii=False, indent=1))
+        self.store.save_state(self.state)

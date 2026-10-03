@@ -1,24 +1,39 @@
 #!/usr/bin/env python3
-"""Waybar: show the active workspace as a Roman numeral. Updates on Hyprland events."""
+"""Waybar: show the active workspace as a Roman numeral. Updates on Hyprland events.
+If the Hyprland socket closes (a Hyprland restart), it connects again."""
 import json
 import os
 import socket
 import subprocess
+import time
 
 ROMAN = ["", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X"]
+TOOLTIP = "Click: next. Right-click: previous. Scroll: switch."
 
 
 def show():
-    ws = json.loads(subprocess.run(["hyprctl", "activeworkspace", "-j"], capture_output=True, text=True).stdout)
-    n = ws.get("id", 0)
+    try:
+        out = subprocess.run(["hyprctl", "activeworkspace", "-j"], capture_output=True, text=True, timeout=2).stdout
+        n = json.loads(out).get("id", 0)
+    except (OSError, subprocess.TimeoutExpired, ValueError):
+        return
     text = ROMAN[n] if 0 < n < len(ROMAN) else str(n)
-    print(json.dumps({"text": text, "tooltip": f"Workspace {n}\\nClick: next. Right-click: previous. Scroll: switch."}), flush=True)
+    print(json.dumps({"text": text, "tooltip": f"Workspace {n}\n{TOOLTIP}"}), flush=True)
 
 
-show()
-path = f'{os.environ["XDG_RUNTIME_DIR"]}/hypr/{os.environ["HYPRLAND_INSTANCE_SIGNATURE"]}/.socket2.sock'
-with socket.socket(socket.AF_UNIX) as s:
-    s.connect(path)
-    for line in s.makefile():
-        if line.startswith(("workspacev2>>", "focusedmonv2>>")):
-            show()
+def watch():
+    path = f'{os.environ["XDG_RUNTIME_DIR"]}/hypr/{os.environ["HYPRLAND_INSTANCE_SIGNATURE"]}/.socket2.sock'
+    with socket.socket(socket.AF_UNIX) as s:
+        s.connect(path)
+        show()
+        for line in s.makefile():
+            if line.startswith(("workspacev2>>", "focusedmonv2>>")):
+                show()
+
+
+while True:
+    try:
+        watch()
+    except OSError:
+        pass
+    time.sleep(2)  # the socket closed or is not there yet: try again

@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "Castorice Tabs",
+  "name": "Companion Tabs",
   "version": "1.0",
-  "description": "Lets the Castorice desktop companion list, switch, open, group, and close tabs. Connects only to 127.0.0.1.",
+  "description": "Lets the Companion desktop companion list, switch, open, group, and close tabs. Connects only to 127.0.0.1.",
   "permissions": ["tabs", "tabGroups", "alarms"],
   "background": { "service_worker": "background.js" }
 }

@@ -1,0 +1,5 @@
+#!/bin/bash
+# Start Companion. gtk4-layer-shell must load before GTK, so preload it.
+# The process is named "companion", so Super+A can signal it: pkill -USR1 -f '^companion'
+cd "$(dirname "$(readlink -f "$0")")"
+LD_PRELOAD=/usr/lib/libgtk4-layer-shell.so exec -a companion python3 main.py "$@"

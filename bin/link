@@ -1,0 +1,68 @@
+#!/bin/bash
+# Make or repair the symlinks that are listed in ~/dotfiles/links.txt.
+#   link          make missing links, and repair links that point to an old place in ~/dotfiles
+#   link --check  only report; change nothing (exit 1 when a link is wrong)
+#   link --remove remove the links that point into the repo (an uninstall); other files stay
+# A real file or folder at a link path is never touched: link reports it, and you decide.
+set -u
+REPO="$HOME/dotfiles"
+check=no
+remove=no
+[ "${1:-}" = "--check" ] && check=yes
+[ "${1:-}" = "--remove" ] && remove=yes
+problems=0
+
+link_one() { # $1 = file in the repo (absolute), $2 = link path
+    local src=$1 dst=$2 now
+    if [ $remove = yes ]; then
+        if [ -L "$dst" ] && [ "$(readlink "$dst")" = "$src" ]; then
+            rm "$dst" && echo "REMOVED $dst"
+        fi
+        return
+    fi
+    if [ -L "$dst" ]; then
+        now=$(readlink "$dst")
+        [ "$now" = "$src" ] && return
+        # A link to another place outside the repo that still works: not ours to change
+        if [[ $now != "$REPO"/* && -e $dst ]]; then
+            echo "SKIP    $dst points to $now (not in ~/dotfiles)"
+            problems=$((problems + 1))
+            return
+        fi
+    elif [ -e "$dst" ]; then
+        echo "SKIP    $dst is a real file or folder. Move it away, then run link again."
+        problems=$((problems + 1))
+        return
+    fi
+    if [ $check = yes ]; then
+        echo "WRONG   $dst (must point to $src)"
+        problems=$((problems + 1))
+        return
+    fi
+    mkdir -p "$(dirname "$dst")"
+    ln -sfn "$src" "$dst" && echo "LINKED  $dst -> $src"
+}
+
+while read -r src dst; do
+    case "$src" in "" | \#*) continue ;; esac
+    dst=${dst/#\~/$HOME}
+    if [[ $src == *'*'* ]]; then # a pattern: link each match into the folder dst
+        for f in "$REPO"/$src; do
+            [ -e "$f" ] && link_one "$f" "${dst%/}/$(basename "$f")"
+        done
+    elif [ -e "$REPO/$src" ]; then
+        link_one "$REPO/$src" "$dst"
+    else
+        echo "MISSING $REPO/$src (correct links.txt)"
+        problems=$((problems + 1))
+    fi
+done < "$REPO/links.txt"
+
+if [ $remove = yes ]; then
+    echo "The links are removed. Your own files were not changed."
+elif [ $problems -eq 0 ]; then
+    echo "All links are correct."
+else
+    echo "$problems problem(s)."
+    exit 1
+fi

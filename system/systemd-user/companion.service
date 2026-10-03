@@ -1,0 +1,15 @@
+[Unit]
+Description=Companion, the desktop companion
+PartOf=hypr-desktop.target
+After=hypr-desktop.target
+# Stop trying after 5 failures in 60 s, so a broken part cannot loop forever
+StartLimitIntervalSec=60
+StartLimitBurst=5
+# Off switch: bin/companion-switch off makes this file, and she does not start until it is removed
+ConditionPathExists=!%h/.config/companion/off
+
+[Service]
+ExecStart=%h/dotfiles/companion/companion
+Restart=on-failure
+RestartSec=2
+

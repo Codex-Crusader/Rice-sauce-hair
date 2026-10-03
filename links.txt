@@ -1,0 +1,41 @@
+# The symlinks that bin/link makes. One line for each: <path in the repo>  <link path>
+# "~" is the home folder. A path with * links each match into the folder on the right.
+# After a clone or a move, run: ~/dotfiles/bin/link     To only check: ~/dotfiles/bin/link --check
+# Files in system/etc are copies, not links: copy them with sudo (see docs/INSTALL.md).
+# install.sh writes ~/.config/qt6ct/qt6ct.conf (Qt needs an absolute path), so the repo stays clean.
+
+# Shell
+shell/zshrc                 ~/.zshrc
+shell/zshenv                ~/.zshenv
+shell/zprofile              ~/.zprofile
+shell/bash_profile          ~/.bash_profile
+
+# Desktop
+desktop/hypr                ~/.config/hypr
+desktop/waybar              ~/.config/waybar
+desktop/swaync              ~/.config/swaync
+desktop/rofi                ~/.config/rofi
+desktop/nwg-drawer          ~/.config/nwg-drawer
+system/systemd-user/*       ~/.config/systemd/user/
+
+# Apps
+apps/kitty                  ~/.config/kitty
+apps/fastfetch              ~/.config/fastfetch
+apps/pcmanfm-qt             ~/.config/pcmanfm-qt
+apps/file-manager-actions   ~/.local/share/file-manager/actions
+
+# Theme
+theme/gtk/gtk-3.0.css       ~/.config/gtk-3.0/gtk.css
+theme/gtk/settings.ini      ~/.config/gtk-3.0/settings.ini
+theme/gtk/gtk-4.0.css       ~/.config/gtk-4.0/gtk.css
+theme/qt6ct/colors          ~/.config/qt6ct/colors
+theme/fonts/cinzel          ~/.local/share/fonts/cinzel
+
+# Commands in the PATH (~/.local/bin)
+bin/health                  ~/.local/bin/health
+bin/sysupdate               ~/.local/bin/sysupdate
+bin/companion-switch        ~/.local/bin/companion-switch
+bin/link                    ~/.local/bin/link
+
+# Desktop shortcut
+docs/RECOVERY.md            ~/Desktop/RECOVERY.md

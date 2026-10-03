@@ -16,22 +16,22 @@ and tested only there. These are the problems that are known. There are more.
   On other screens they can overlap.
 - **Chrome is the Flatpak version.** Keys and the companion run `flatpak run com.google.Chrome`.
   A different browser needs code changes.
-- **`health` and `sysupdate` assume the author's system** (snapper, GRUB, an NVIDIA GPU, a git repo with a remote).
-  On other systems they show warnings that are not real problems.
+- **`health` checks only the parts that it finds** (an NVIDIA driver, Ollama, GRUB, grub-btrfs, a git upstream).
+  `sysupdate` assumes pacman, hyprpm, and Flatpak.
 - **The system files in `system/` come from one machine.** Read them before you copy them.
 
 ## The companion
 
-- **A small local model makes mistakes.** She can pick the wrong tool, misunderstand a request,
-  or say that something is done when it failed. The code catches many of these cases, but not all.
+- **A small local model makes mistakes.** She can pick the wrong thing or misunderstand a request.
+  Code checks every step, and she reports the real results, but a wrong guess still happens.
+  Say "no, I meant ..." and she learns the words.
 - **She is slow without a GPU.** On a CPU, one answer can take 10 to 30 seconds.
-- **She sometimes says "one moment" first.** The code then makes her act, so each task takes a little longer.
 - **She cannot see apps that crash after they start.** She reports "opened" when the start worked.
 - **The Chrome tab tools need the extension** (see the install guide). Without it, she can only open new tabs.
-- **The hand-off needs the `claude` command line tool.** She can type into Claude windows that she opened,
-  but not into other windows.
+- **The hand-off needs the `claude` command line tool**, and it uses your Claude account. A question takes
+  about 10 to 30 seconds. She can type into Claude windows that she opened, but not into other windows.
 - **Her saved chat can confuse her.** If she keeps repeating a wrong answer, delete
-  `~/.local/share/castorice/state.json` and restart her.
+  `~/.local/share/companion/state.json` and restart her.
 
 ## The desktop
 
@@ -41,6 +41,6 @@ and tested only there. These are the problems that are known. There are more.
 - **The falling leaves use about 5% of one CPU core** while the desktop is empty. They stop when a window
   is open on the workspace and in the power-saver profile.
 - **The terminal card size assumes Kitty's default font size.** With another font size, the card can look stretched.
-  Change `--logo-width` and `--logo-height` at the end of `shell/zshrc`.
+  Change `--logo-width` and `--logo-height` near the end of `shell/zshrc`.
 - **The music widget shows album art only when the player gives a local file.** Otherwise it shows a placeholder.
 - **The GPU status in the widget only knows NVIDIA.** On other systems it shows "missing".

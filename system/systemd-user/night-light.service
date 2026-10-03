@@ -1,0 +1,11 @@
+[Unit]
+Description=Night light (hyprsunset, see hypr/hyprsunset.conf)
+PartOf=hypr-desktop.target
+After=hypr-desktop.target
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+[Service]
+ExecStart=/usr/bin/hyprsunset
+Restart=on-failure
+RestartSec=2

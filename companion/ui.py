@@ -10,11 +10,11 @@ gi.require_version("Gtk4LayerShell", "1.0")
 from gi.repository import Gdk, Gio, GLib, Gtk  # noqa: E402
 from gi.repository import Gtk4LayerShell as LayerShell  # noqa: E402
 
-AVATAR_DIR = Path.home() / ".local/share/castorice/avatar"
 AVATAR_SIZE = 170
+KEYBOARD_SECONDS = 20  # Super+A with nothing typed: the keyboard goes back after this time
 
 CSS = b"""
-window.castorice { background: transparent; }
+window.companion { background: transparent; }
 .bubble {
     background-color: rgba(26, 16, 19, 0.94);
     border: 1px solid #c9a15b;
@@ -44,7 +44,7 @@ popover.menu modelbutton:hover { background-color: #6b2d4a; }
 def place_in_corner(window, right, bottom, keyboard):
     """Make window a layer surface in the bottom-right corner, above other windows."""
     LayerShell.init_for_window(window)
-    LayerShell.set_namespace(window, "castorice")
+    LayerShell.set_namespace(window, "companion")
     LayerShell.set_layer(window, LayerShell.Layer.TOP)
     LayerShell.set_anchor(window, LayerShell.Edge.BOTTOM, True)
     LayerShell.set_anchor(window, LayerShell.Edge.RIGHT, True)
@@ -54,20 +54,25 @@ def place_in_corner(window, right, bottom, keyboard):
 
 
 class CompanionWindow(Gtk.ApplicationWindow):
-    def __init__(self, app, persona, on_send, on_confirm, on_menu):
+    def __init__(self, app, config, on_send, on_confirm, on_menu):
         super().__init__(application=app)
-        self.persona = persona
+        self.avatar_dir = config.avatar_dir
+        self.persona = persona = config.persona
         self.on_send, self.on_confirm, self.on_menu = on_send, on_confirm, on_menu
         self.expressions = persona["expressions"]
         self.hide_timer = None
+        self.asking = lambda: False  # main.py sets this to session.asking
         self.textures = {}
         self.expression = "idle"
-        self.add_css_class("castorice")
+        self.add_css_class("companion")
         self._layer_shell()
         self._build()
         self._load_css()
         self.phase = 0.0
-        GLib.timeout_add(50, self._float)
+        self.float_timer = None
+        self.idle_keyboard_timer = None
+        self._start_float()
+        self.connect("notify::visible", lambda *_: self._start_float() if self.get_visible() else self._stop_float())
         self._plan_blink()
 
     # ----- setup -----
@@ -79,7 +84,7 @@ class CompanionWindow(Gtk.ApplicationWindow):
         # Right-aligned: her face stays in the corner when the bubble is hidden
         # Speech bubble: its own window left of her face, so it leaves no empty space when hidden
         self.bubble_window = Gtk.Window(application=self.get_application())
-        self.bubble_window.add_css_class("castorice")
+        self.bubble_window.add_css_class("companion")
         place_in_corner(self.bubble_window, right=14 + AVATAR_SIZE + 6, bottom=6 + 60,
                         keyboard=LayerShell.KeyboardMode.NONE)
         self.bubble = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6, valign=Gtk.Align.END)
@@ -127,16 +132,16 @@ class CompanionWindow(Gtk.ApplicationWindow):
 
     def _menu(self):
         """Right-click on her face: a small menu."""
-        items = [("Health check", "health"), ("Pause her remarks", "pause"), ("Hide (Super+Shift+A)", "hide"),
-                 ("Restart her", "restart"), ("Open her log", "log")]
+        items = [("Stop what she is doing", "stop"), ("Health check", "health"), ("Pause her remarks", "pause"), ("Hide (Super+Shift+A)", "hide"),
+                 ("Restart her", "restart"), ("Open her log", "log"), ("Turn her off (companion-switch on)", "off")]
         menu = Gio.Menu()
         group = Gio.SimpleActionGroup()
         for label, name in items:
-            menu.append(label, f"castorice.{name}")
+            menu.append(label, f"companion.{name}")
             action = Gio.SimpleAction.new(name, None)
             action.connect("activate", lambda _a, _p, n=name: self.on_menu(n))
             group.add_action(action)
-        self.insert_action_group("castorice", group)
+        self.insert_action_group("companion", group)
         self.popover = Gtk.PopoverMenu.new_from_model(menu)
         self.popover.set_parent(self.face)
         self.popover.set_has_arrow(False)
@@ -152,9 +157,19 @@ class CompanionWindow(Gtk.ApplicationWindow):
 
     # ----- behaviour -----
 
+    def _start_float(self):
+        if not self.float_timer:
+            self.float_timer = GLib.timeout_add(100, self._float)  # 10 steps a second is smooth enough
+
+    def _stop_float(self):
+        """Hidden: no timer, so a hidden companion costs no CPU."""
+        if self.float_timer:
+            GLib.source_remove(self.float_timer)
+            self.float_timer = None
+
     def _float(self):
         """A slow, gentle bob, so she looks alive."""
-        self.phase += 0.08
+        self.phase += 0.16
         offset = round(4 * math.sin(self.phase))
         self.face.set_margin_top(4 + offset)
         self.face.set_margin_bottom(4 - offset)
@@ -168,7 +183,7 @@ class CompanionWindow(Gtk.ApplicationWindow):
 
     def set_expression(self, name):
         self.expression = name if name in self.expressions else "idle"
-        texture = self._texture(AVATAR_DIR / self.expressions[self.expression])
+        texture = self._texture(self.avatar_dir / self.expressions[self.expression])
         if texture:
             self.face.set_paintable(texture)
 
@@ -178,7 +193,7 @@ class CompanionWindow(Gtk.ApplicationWindow):
         GLib.timeout_add(random.randint(2500, 5500), self._blink)
 
     def _blink(self, again=True):
-        file = AVATAR_DIR / self.expressions[self.expression]
+        file = self.avatar_dir / self.expressions[self.expression]
         closed = self._texture(file.with_name(file.stem + "-blink.png"))
         if closed:
             self.face.set_paintable(closed)
@@ -212,11 +227,7 @@ class CompanionWindow(Gtk.ApplicationWindow):
             return
         entry.set_text("")
         self.release()
-        lowered = text.lower()
-        if self.buttons.get_visible() and lowered in ("yes", "y", "ok", "no", "n"):
-            self._answer(lowered in ("yes", "y", "ok"))
-            return
-        self.on_send(text)
+        self.on_send(text)  # the session decides if a typed "yes" or "no" answers a question
 
     def _answer(self, yes):
         self.buttons.set_visible(False)
@@ -233,18 +244,36 @@ class CompanionWindow(Gtk.ApplicationWindow):
 
     def _hide_bubble(self):
         self.hide_timer = None
-        if not self.buttons.get_visible():
+        if not self.asking():  # the bubble stays while a question is open
             self.bubble_window.set_visible(False)
             self.set_expression("idle")
         return False
 
     def summon(self):
-        """Super+A: take the keyboard so the user can type at once. Enter or Esc gives it back."""
+        """Super+A: take the keyboard so the user can type at once. Enter or Esc gives it back.
+        With an empty text box, the keyboard also goes back after KEYBOARD_SECONDS."""
         self.set_visible(True)
         LayerShell.set_keyboard_mode(self, LayerShell.KeyboardMode.EXCLUSIVE)
         self.entry.grab_focus()
+        self._plan_keyboard_release()
+
+    def _plan_keyboard_release(self):
+        if self.idle_keyboard_timer:
+            GLib.source_remove(self.idle_keyboard_timer)
+        self.idle_keyboard_timer = GLib.timeout_add_seconds(KEYBOARD_SECONDS, self._release_if_idle)
+
+    def _release_if_idle(self):
+        self.idle_keyboard_timer = None
+        if self.entry.get_text().strip():  # still typing: wait again
+            self._plan_keyboard_release()
+        else:
+            self.release()
+        return False
 
     def release(self):
+        if self.idle_keyboard_timer:
+            GLib.source_remove(self.idle_keyboard_timer)
+            self.idle_keyboard_timer = None
         LayerShell.set_keyboard_mode(self, LayerShell.KeyboardMode.ON_DEMAND)
 
     def toggle_visible(self):

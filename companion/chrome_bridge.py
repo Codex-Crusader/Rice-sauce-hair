@@ -1,34 +1,41 @@
-"""Bridge to the Castorice Chrome extension.
+"""Bridge to the Companion Chrome extension.
 
 The extension connects to ws://127.0.0.1:8765 and sends the secret token first.
 Then this bridge sends commands ({id, cmd, args}) and waits for replies ({id, result}).
-The token is in ~/.config/castorice/token. The extension's copy is in
+The token is in ~/.config/companion/token. The extension's copy is in
 chrome-extension/token.js (made by setup.sh, not in git).
 """
 import asyncio
 import json
+import logging
+import os
 import secrets
 import threading
 from pathlib import Path
 
 import websockets
 
+from runner import Result
+
 HOST, PORT = "127.0.0.1", 8765
-TOKEN_FILE = Path.home() / ".config/castorice/token"
+NOT_CONNECTED = "Chrome is not connected. Is Chrome open, with the Companion extension on?"
+TOKEN_FILE = Path.home() / ".config/companion/token"
+log = logging.getLogger("chrome")
 FILLER = {"tab", "tabs", "the", "a", "an", "two", "three", "my", "chrome", "page", "pages", "window", "and"}
 
 
-def load_token():
-    if not TOKEN_FILE.exists():
-        TOKEN_FILE.parent.mkdir(parents=True, exist_ok=True)
-        TOKEN_FILE.write_text(secrets.token_hex(24))
-        TOKEN_FILE.chmod(0o600)
-    return TOKEN_FILE.read_text().strip()
+def load_token(token_file=TOKEN_FILE):
+    if not token_file.exists():
+        token_file.parent.mkdir(parents=True, exist_ok=True)
+        fd = os.open(token_file, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)  # private from the start
+        with os.fdopen(fd, "w") as f:
+            f.write(secrets.token_hex(24))
+    return token_file.read_text().strip()
 
 
 class ChromeBridge:
-    def __init__(self):
-        self.token = load_token()
+    def __init__(self, token_file=TOKEN_FILE):
+        self.token = load_token(token_file)
         self.socket = None
         self.pending = {}
         self.next_id = 0
@@ -39,13 +46,20 @@ class ChromeBridge:
 
     def _serve(self):
         asyncio.set_event_loop(self.loop)
-        self.loop.run_until_complete(self._main())
+        try:
+            self.loop.run_until_complete(self._main())
+        except OSError as e:  # for example, port 8765 is in use
+            log.error("Chrome bridge did not start on %s:%s: %s", HOST, PORT, e)
 
     async def _main(self):
         async with websockets.serve(self._handle, HOST, PORT):
             await asyncio.Future()  # run forever
 
     async def _handle(self, socket):
+        origin = socket.request.headers.get("Origin", "")
+        if origin and not origin.startswith("chrome-extension://"):  # a web page must never connect
+            await socket.close(code=4003, reason="bad origin")
+            return
         try:
             if await asyncio.wait_for(socket.recv(), 5) != self.token:
                 await socket.close(code=4001, reason="bad token")
@@ -78,19 +92,21 @@ class ChromeBridge:
 
     def call(self, cmd, **args):
         if not self.socket:
-            return "Chrome is not connected. Is Chrome open, with the Castorice extension on?"
+            return Result(False, NOT_CONNECTED)
         try:
             result = asyncio.run_coroutine_threadsafe(self._send(cmd, args), self.loop).result(6)
         except Exception as e:  # timeout or closed connection
-            return f"Chrome did not answer: {e}"
-        return result if isinstance(result, str) else json.dumps(result)
+            return Result(False, f"Chrome did not answer: {e}")
+        return Result(True, result if isinstance(result, str) else json.dumps(result))
 
     def tabs(self):
         """All open tabs as a list of dicts, or None when Chrome is not connected."""
         raw = self.call("list")
+        if not raw.ok:
+            return None
         try:
-            return json.loads(raw)
-        except (TypeError, json.JSONDecodeError):
+            return json.loads(raw.text)
+        except json.JSONDecodeError:
             return None
 
     def find(self, queries, keep=()):
@@ -116,8 +132,9 @@ class ChromeBridge:
     def list_tabs(self):
         tabs = self.tabs()
         if tabs is None:
-            return "Chrome is not connected. Is Chrome open, with the Castorice extension on?"
-        return "\n".join(f'{"* " if t["active"] else ""}{t["title"][:70]} | {t["url"][:80]}' for t in tabs)
+            return Result(False, NOT_CONNECTED)
+        rows = "\n".join(f'{"* " if t["active"] else ""}{t["title"][:70]} | {t["url"][:80]}' for t in tabs)
+        return Result(True, rows or "no tabs", untrusted=True)
 
     def describe(self, tabs, keep=()):
         """For the yes/no question: what exactly would be closed."""
@@ -132,7 +149,7 @@ class ChromeBridge:
     def switch_tab(self, tab):
         found = self.find([tab])
         if not found:
-            return f'no tab matches "{tab}"'
+            return Result(False, f'no tab matches "{tab}"', final=True)
         return self.call("switch", tab_id=found[0]["id"])
 
     def open_tab(self, url):
@@ -141,11 +158,11 @@ class ChromeBridge:
     def group_tabs(self, tabs, title):
         found = self.find(tabs)
         if not found:
-            return f"no tab matches {tabs}"
+            return Result(False, f"no tab matches {tabs}", final=True)
         return self.call("group", tab_ids=[t["id"] for t in found], title=title)
 
     def close_tabs(self, tabs, keep=()):
         found = self.find(tabs, keep)
         if not found:
-            return f"no tab matches {tabs}"
+            return Result(False, f"no tab matches {tabs}", final=True)
         return self.call("close", tab_ids=[t["id"] for t in found])

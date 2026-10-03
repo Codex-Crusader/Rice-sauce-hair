@@ -1,0 +1,11 @@
+[Unit]
+Description=Bluetooth tray icon (blueman-applet)
+PartOf=hypr-desktop.target
+After=hypr-desktop.target
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+[Service]
+ExecStart=/usr/bin/blueman-applet
+Restart=on-failure
+RestartSec=2

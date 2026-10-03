@@ -1,0 +1,11 @@
+[Unit]
+Description=On-screen popups for volume, brightness and Caps Lock (SwayOSD)
+PartOf=hypr-desktop.target
+After=hypr-desktop.target
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+[Service]
+ExecStart=/usr/bin/swayosd-server --style %h/dotfiles/desktop/swayosd/style.css
+Restart=on-failure
+RestartSec=2

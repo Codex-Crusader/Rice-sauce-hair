@@ -1,0 +1,20 @@
+#!/bin/sh
+# Turn Companion off or on. Off stays off after a restart or a new login.
+#   companion-switch off | on | status
+FLAG="$HOME/.config/companion/off"
+case "$1" in
+    off)
+        mkdir -p "$(dirname "$FLAG")"
+        touch "$FLAG"
+        systemctl --user stop companion
+        echo "Companion is off. Turn her on with: companion-switch on" ;;
+    on)
+        rm -f "$FLAG"
+        systemctl --user start companion
+        echo "Companion is on." ;;
+    status)
+        if [ -e "$FLAG" ]; then echo off; else systemctl --user is-active companion; fi ;;
+    *)
+        echo "Usage: companion-switch off | on | status"
+        exit 1 ;;
+esac

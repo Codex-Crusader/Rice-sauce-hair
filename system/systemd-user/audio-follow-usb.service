@@ -1,0 +1,11 @@
+[Unit]
+Description=USB headphones become the default audio output
+PartOf=hypr-desktop.target
+After=hypr-desktop.target
+StartLimitIntervalSec=60
+StartLimitBurst=5
+
+[Service]
+ExecStart=%h/dotfiles/bin/audio-follow-usb
+Restart=on-failure
+RestartSec=2

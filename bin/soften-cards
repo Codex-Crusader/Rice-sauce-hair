@@ -1,13 +1,14 @@
 #!/bin/sh
-# Make see-through copies of the Chrysos Heir cards for the desktop widget and fastfetch.
+# Make see-through copies of the art cards for the desktop widget and fastfetch.
 # White parts (light, low saturation) get about 50% opacity; colored parts stay at about 95%.
-# Copies go to ~/.cache/chrysos-cards; a card is redone only when the original is newer.
-SRC="$HOME/Pictures/chrysos-cards"
-OUT="$HOME/.cache/chrysos-cards"
+# Copies go to ~/.cache/art-cards as PNG; a card is redone only when the original is newer.
+SRC="$HOME/Pictures/art-cards"
+OUT="$HOME/.cache/art-cards"
 mkdir -p "$OUT"
-for card in "$SRC"/*.png; do
+for card in "$SRC"/*.png "$SRC"/*.jpg "$SRC"/*.jpeg "$SRC"/*.webp; do
     [ -f "$card" ] || continue
-    soft="$OUT/$(basename "$card")"
+    name=$(basename "$card")
+    soft="$OUT/${name%.*}.png"
     [ "$soft" -nt "$card" ] && continue
     magick "$card" -alpha set -channel A \
         -fx "0.95 - 0.45 * clamp((lightness - 0.55) / 0.4) * (1 - saturation)" \
