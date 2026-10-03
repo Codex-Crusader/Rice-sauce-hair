@@ -95,3 +95,5 @@ screen are manual steps: read the [Install guide](docs/INSTALL.md).
 - Third-party parts: the Cinzel font (SIL Open Font License, `theme/fonts/cinzel/OFL.txt`) and
   [fzf-tab](https://github.com/Aloxaf/fzf-tab) (git submodule).
 - There is no license file. All rights are reserved, except for the third-party parts.
+
+i thank claude code for helping me with the documentation. god knows it would have been BAD.
