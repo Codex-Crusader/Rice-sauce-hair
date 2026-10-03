@@ -64,7 +64,7 @@ class ChromeBridge:
             if await asyncio.wait_for(socket.recv(), 5) != self.token:
                 await socket.close(code=4001, reason="bad token")
                 return
-        except (asyncio.TimeoutError, websockets.ConnectionClosed):
+        except (TimeoutError, websockets.ConnectionClosed):
             return
         self.socket = socket
         try:

@@ -49,8 +49,8 @@ fi
 
 n=$(git -C "$REPO" status --porcelain 2>/dev/null | wc -l)
 [ "$n" -eq 0 ] && ok "dotfiles committed" || warn "$n uncommitted changes in $REPO"
-if git -C "$REPO" rev-parse --abbrev-ref @{u} >/dev/null 2>&1; then
-    n=$(git -C "$REPO" log --oneline @{u}..HEAD | wc -l)
+if git -C "$REPO" rev-parse --abbrev-ref '@{u}' >/dev/null 2>&1; then
+    n=$(git -C "$REPO" log --oneline '@{u}'..HEAD | wc -l)
     [ "$n" -eq 0 ] && ok "dotfiles pushed" || warn "$n commits not pushed (run: git -C $REPO push)"
 fi
 "$REPO/bin/theme-build" --check >/dev/null 2>&1 && ok "theme files match the palette" \

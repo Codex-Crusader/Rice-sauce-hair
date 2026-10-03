@@ -1,3 +1,4 @@
+# shellcheck shell=sh disable=SC2034  # sourced by other scripts: the names are used there
 # Theme palette "Amphora". Taken from a red-figure Greek vase.
 # The one source of all theme colors. After a change, run: theme-build
 # (it writes the palette files for GTK, rofi, Hyprland, hyprlock, kitty, Qt and GRUB).

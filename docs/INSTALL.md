@@ -22,7 +22,7 @@ sudo pacman -Syu --needed \
   adw-gtk-theme papirus-icon-theme noto-fonts noto-fonts-emoji ttf-jetbrains-mono-nerd \
   zsh zsh-autosuggestions zsh-syntax-highlighting fzf fd less \
   cliphist wl-clipboard grim slurp satty playerctl brightnessctl libnotify xdg-utils \
-  pipewire pipewire-pulse libpulse wireplumber pavucontrol \
+  pipewire pipewire-pulse libpulse wireplumber pavucontrol rtkit \
   networkmanager network-manager-applet blueman bluez udiskie efibootmgr \
   power-profiles-daemon gtk4-layer-shell python-gobject python-websockets \
   fastfetch imagemagick flatpak git cmake meson cpio pkgconf gcc

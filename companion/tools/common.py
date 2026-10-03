@@ -1,7 +1,7 @@
 """What all tools share: the Tool record, and helpers that turn a command into a Result."""
 from dataclasses import dataclass
 import json
-from typing import Callable
+from collections.abc import Callable
 
 from runner import Result
 

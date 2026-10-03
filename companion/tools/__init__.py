@@ -90,7 +90,7 @@ def build_tools(chrome, runner, config, store):
              {"tab": {**s, "description": "a word from the tab title or URL"}}, ["tab"], chrome.switch_tab),
         Tool("open_tab", TIER_SMALL, "Open a new Chrome tab.", {"url": s}, ["url"], chrome.open_tab),
         Tool("group_tabs", TIER_SMALL, "Put Chrome tabs into a named group.",
-             {**{"tabs": {"type": "array", "items": s, "description": "words from the tab titles or URLs, e.g. [\"youtube\", \"whatsapp\"]"}}, "title": s}, ["tabs", "title"], chrome.group_tabs),
+             {"tabs": {"type": "array", "items": s, "description": "words from the tab titles or URLs, e.g. [\"youtube\", \"whatsapp\"]"}, "title": s}, ["tabs", "title"], chrome.group_tabs),
         Tool("close_tabs", TIER_CONFIRM, "Close Chrome tabs. Name them by words from their titles or URLs. "
              "For 'all except X': tabs=[\"all\"], keep=[\"X\"].",
              {"tabs": {"type": "array", "items": s, "description": "words from the tab titles or URLs, or [\"all\"]"},

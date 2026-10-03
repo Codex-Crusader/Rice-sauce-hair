@@ -15,7 +15,6 @@ import logging
 import queue
 import re
 import threading
-import time
 import urllib.error
 from dataclasses import dataclass, field
 
@@ -217,7 +216,7 @@ class Session:
         work = Work(request, context.snapshot(self.tools, self.runner, st.last_target))
         learned = self.store.aliases()
         strict = lambda name: toolbox.find_app(name, fuzzy=False, learned=learned)  # the router: exact matches only
-        decision = planner.route(request, strict, {**toolbox.APP_ALIASES, **learned})
+        decision = planner.route(request, strict, {**toolbox.APP_ALIASES, **learned}, st.last_target)
         if decision is None:
             work.candidates = candidates.find(request, work.snap, self.runner, learned)
             log.info("candidates: %s", [c.label for c in work.candidates])
@@ -357,12 +356,12 @@ class Session:
 
     def _results_note(self, work):
         lines = []
-        for name, args, r in work.results:
+        for name, _args, r in work.results:
             text = r.text[:1500]
             if r.untrusted:
                 text = f"{context.LABEL}\n{text}"
             lines.append(f"- {name}: {'done' if r.ok else 'NOT done'}: {text}")
-        return (f"(What really happened for this request:\n" + "\n".join(lines) +
+        return ("(What really happened for this request:\n" + "\n".join(lines) +
                 f"\nTell {self.config.user} in one to three short sentences what was done and what was not, "
                 f"or answer from these results. Claim only what this list shows.)")
 
@@ -375,6 +374,7 @@ class Session:
         except TypeError as e:
             result = Result(False, f"wrong arguments for {tool.name}: {e}")
         except Exception as e:
+            log.exception("tool %s raised", tool.name)  # the traceback goes to the log, for debugging
             result = Result(False, f"{tool.name} failed: {e}")
         if result.ok and tool.name == "run_in_terminal" and policy.is_claude_command(str(args.get("command", ""))):
             self.state.last_target = ("claude", "")

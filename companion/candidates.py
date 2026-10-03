@@ -60,8 +60,9 @@ def overlap(words, text):
     return sum(1 for w in words if w in have or (len(w) >= 4 and any(h.startswith(w) for h in have)))
 
 
-def find(request, snap, runner, learned=None, home=Path.home()):
+def find(request, snap, runner, learned=None, home=None):
     """The best candidates for the request, highest score first. snap: context.Snapshot (or None)."""
+    home = home or Path.home()  # at call time, not at import (a test can change the home folder)
     words = words_of(request)
     if not words:
         return []

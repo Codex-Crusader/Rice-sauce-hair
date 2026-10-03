@@ -523,6 +523,15 @@ class Router(unittest.TestCase):
     def route(self, text):
         return planner.route(text, find_app=lambda name: name.lower() == "kitty", aliases={})
 
+    def test_close_it_uses_the_last_target(self):
+        tab = ("tab", "lofi hip hop radio - YouTube")
+        route = lambda text, last: planner.route(text, find_app=lambda name: False, aliases={}, last=last)
+        self.assertEqual(route("now close it", tab).steps, [planner.Step("close_tabs", {"tabs": [tab[1]]})])
+        self.assertEqual(route("close that window", ("window", "kitty")).steps,
+                         [planner.Step("close_window", {"window": "kitty"})])
+        self.assertIsNone(route("close it", None))  # no target: the model decides
+        self.assertIsNone(route("close it and open kitty", tab))  # more than one task: the model decides
+
     def test_routes(self):
         self.assertEqual(self.route("make it quieter").steps[0], planner.Step("set_volume", {"percent": "-10"}))
         self.assertEqual(self.route("a bit louder please").steps[0].args, {"percent": "+10"})

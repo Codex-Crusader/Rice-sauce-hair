@@ -18,7 +18,8 @@
     "title": { "text": "Quick settings", "clear-all-button": true, "button-text": "Clear all" },
     "dnd": { "text": "Do not disturb" },
     "volume": { "label": "󰕾" },
-    "backlight": { "label": "󰃠" },
+    "backlight": { "label": "󰃠", "device": "amdgpu_bl1" },
+    "notifications": {},
     "buttons-grid": {
       "actions": [
         { "label": "󰖩", "tooltip": "Wi-Fi on or off", "type": "toggle", "active": false,

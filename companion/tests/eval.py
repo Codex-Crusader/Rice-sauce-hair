@@ -23,8 +23,6 @@ sys.path.insert(0, str(HERE))
 import config as config_mod  # noqa: E402
 import llm  # noqa: E402
 import handoff  # noqa: E402
-import mood  # noqa: E402
-import tools  # noqa: E402
 import voice  # noqa: E402
 from runner import Result, Runner  # noqa: E402
 from session import Session  # noqa: E402

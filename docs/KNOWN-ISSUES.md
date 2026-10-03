@@ -19,6 +19,8 @@ and tested only there. These are the problems that are known. There are more.
 - **`health` checks only the parts that it finds** (an NVIDIA driver, Ollama, GRUB, grub-btrfs, a git upstream).
   `sysupdate` assumes pacman, hyprpm, and Flatpak.
 - **The system files in `system/` come from one machine.** Read them before you copy them.
+- **The brightness slider in the notification panel uses `amdgpu_bl1`.** Put your device name
+  (`ls /sys/class/backlight`) in `desktop/swaync/config.json`.
 
 ## The companion
 
