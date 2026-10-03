@@ -35,7 +35,7 @@ Edit `companion/persona.toml` (the installer made it from `persona.example.toml`
 | `[expressions]` | The face files (see [Customize](CUSTOMIZE.md)) |
 | `[prompt] system` | Her character and her voice. Write her character under **WHO YOU ARE**. Keep it short: a small model follows a short character best. No tool rules are needed: the planner decides the tools. |
 | `[moods]` (optional) | Your own text for a mood, for example a wistful line that fits her story |
-| `[handoff] deny` | Paths that never go to Claude Code. Add your own private folders. |
+| `[handoff] deny` | Paths that never go to Claude Code, and that the file tools never open. Add your own private folders. |
 | `[[eval]]` (optional) | Tests for `tests/eval.py` that need your character |
 
 Restart her after a change (right-click her face, then **Restart her**).

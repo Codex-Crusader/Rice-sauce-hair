@@ -1,0 +1,27 @@
+/* The companion window. Theme "Amphora": colors by name from the palette (made by theme-build). */
+@import url("../theme/gtk/palette.css");
+
+window.companion { background: transparent; }
+.bubble {
+    background-color: alpha(@surface, 0.94);
+    border: 1px solid @gold;
+    border-radius: 14px;
+    padding: 10px 14px;
+}
+.bubble label { color: @marble; font-family: "Noto Sans"; font-size: 11pt; }
+.bubble label.name { color: @gold; font-family: "Cinzel"; font-weight: bold; font-size: 9pt; }
+.bubble button { background: @overlay; color: @marble; border: 1px solid alpha(@gold, .6);
+                 border-radius: 8px; padding: 2px 14px; }
+.bubble button.yes { background: @wine; }
+entry.talk {
+    background-color: alpha(@bg, 0.88);
+    color: @marble;
+    border: 1px solid alpha(@gold, 0.7);
+    border-radius: 12px;
+    padding: 4px 10px;
+    font-family: "Noto Sans";
+}
+entry.talk:focus-within { border-color: @gold; }
+popover.menu contents { background-color: @surface; border: 1px solid @gold; border-radius: 10px; }
+popover.menu modelbutton { color: @marble; border-radius: 6px; }
+popover.menu modelbutton:hover { background-color: @wine; }

@@ -61,10 +61,22 @@ Put your card images in `~/Pictures/art-cards/`. Until you do, the widget shows 
 
 ## Colors
 
-The palette is in `theme/palette.sh`. Change a color there first. Then change the same value in the files
-that use it: `desktop/waybar/*.css`, `desktop/widgets/style.css`, `theme/gtk/colors.css` (and `theme/gtk/gtk-3.0.css`,
-`theme/gtk/gtk-4.0.css`), `desktop/swaync/style.css`, `desktop/rofi/`, `apps/kitty/`, `theme/qt6ct/colors/`,
-`desktop/hypr/hyprland.lua` (borders), `companion/ui.py` (bubble). To find them all: `git grep palette.sh`.
+All colors are in `theme/palette.sh`, and only there. To change a color:
+
+1. Change the value in `theme/palette.sh`. You can also add a color with a new name.
+2. Run `theme-build`. It writes the palette files and the files made from templates.
+3. Restart the desktop parts: **Super+Shift+R**. Kitty and Qt apps take the new colors when they start again.
+
+The apps use the color names, not the values:
+
+| Where | How to name a color |
+|---|---|
+| GTK CSS (bars, notifications, widgets, menus, companion, login screen) | `@gold`, `alpha(@bg, 0.8)` |
+| Hyprland Lua (`desktop/hypr/*.lua`) | `c.gold`, `c.rgba(c.gold, "cc")` |
+| Templates (`*.tmpl`: kitty, Qt, GRUB, rofi, hyprlock) | `#{{gold}}`, `rgba({{bg:rgb}}, 85%)` |
+
+Edit a `.tmpl` file, not the file that `theme-build` makes from it. `theme-build --check` (also in `health`)
+reports a file that is out of date, a color value outside the palette, and an unknown color name.
 
 ## Keys
 

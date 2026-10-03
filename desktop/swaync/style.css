@@ -1,17 +1,10 @@
-/* swaync. Theme "Amphora". */
-@define-color bg      rgba(13, 6, 8, 0.90);
-@define-color surface #1a1013;
-@define-color overlay #2a1c20;
-@define-color marble  #ede6da;
-@define-color muted   #bf9795;
-@define-color gold    #c9a15b;
-@define-color wine    #6b2d4a;
-@define-color red     #c0503a;
+/* swaync. Theme "Amphora": colors by name from palette.css (made by theme-build). */
+@import url("palette.css");
 
 * { font-family: "JetBrainsMono Nerd Font"; color: @marble; }
 
 .control-center {
-    background: @bg;
+    background: alpha(@bg, 0.90);
     border: 1px solid @gold;
     border-radius: 14px;
     padding: 8px;

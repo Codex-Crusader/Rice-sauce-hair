@@ -4,6 +4,8 @@ if it runs, asks first, is refused, or goes to Claude Code.
 decide() is pure: it reads only the tool, the arguments, and the user's words.
 The command gate for run_in_terminal is an allowlist: one plain read-only program runs at once,
 every other command asks first, and commands that destroy data or need root are refused.
+The file boundary (safe_path, safe_to_open): file tools touch only the home folder, never a deny folder,
+and never open a file that would run a program.
 """
 import os
 import re
@@ -105,15 +107,23 @@ def command_is_safe(command):
     return bool(allowed) and len(words) > 1 and words[1] in allowed
 
 
+_aliases = {"key": None, "names": frozenset()}
+
+
 def shell_aliases():
-    """Alias names from the zsh files, so "prime-run" counts as a program."""
-    names = set()
-    for f in [Path.home() / ".zshrc", *(REPO / "shell").glob("*.zsh")]:
-        try:
-            names.update(re.findall(r"^\s*alias\s+([\w-]+)=", f.read_text(), re.M))
-        except OSError:
-            pass
-    return names
+    """Alias names from the zsh files, so "prime-run" counts as a program.
+    The files are read again only when one of them changes."""
+    files = [Path.home() / ".zshrc", *sorted((REPO / "shell").glob("*.zsh"))]
+    key = tuple(f.stat().st_mtime_ns if f.exists() else 0 for f in files)
+    if key != _aliases["key"]:
+        names = set()
+        for f in files:
+            try:
+                names.update(re.findall(r"^\s*alias\s+([\w-]+)=", f.read_text(), re.M))
+            except OSError:
+                pass
+        _aliases.update(key=key, names=frozenset(names))
+    return _aliases["names"]
 
 
 def program_exists(command):
@@ -137,6 +147,43 @@ def command_verdict(command):
         return Verdict("refuse", f'failed: there is no program named "{words[0] if words else command}". '
                                  f'Check what the user meant.')
     return Verdict("run") if command_is_safe(command) else Verdict("confirm")
+
+
+# ---------- the file boundary ----------
+# The file tools call these themselves, so the boundary holds for every caller, not only for the planner.
+
+# Files that start a program when they are opened (kitty-open runs shell scripts here).
+LAUNCHERS = {".desktop", ".appimage", ".run", ".jar", ".exe", ".msi", ".bat", ".cmd",
+             ".sh", ".bash", ".zsh", ".fish", ".command"}
+
+
+class PathRefused(ValueError):
+    """The path is not permitted. The message tells why."""
+
+
+def safe_path(path, deny, home=None):
+    """The real path (symlinks followed) of an existing file or folder inside the home folder.
+    A relative path is relative to the home folder. An invented home (/home/someone/x) maps to the real one.
+    Raises PathRefused when the path does not exist, is outside the home folder, or is in a deny folder."""
+    home = (home or Path.home()).resolve()
+    text = re.sub(r"^~(?=/|$)|^/home/[^/]+", str(home), str(path).strip())
+    try:
+        real = (home / text).resolve(strict=True)  # an absolute text replaces home
+    except (OSError, RuntimeError):
+        raise PathRefused(f"{path} does not exist") from None
+    if not real.is_relative_to(home):
+        raise PathRefused(f"{path} is outside the home folder")
+    if any(real.is_relative_to(d) for d in deny):
+        raise PathRefused(f"{path} is in a private folder")
+    return real
+
+
+def safe_to_open(path, deny, home=None):
+    """safe_path, and the file must not start a program (a launcher type, or the executable bit)."""
+    real = safe_path(path, deny, home)
+    if real.is_file() and (real.suffix.lower() in LAUNCHERS or os.access(real, os.X_OK)):
+        raise PathRefused(f"{path} is a program or a script, and opening it would run it")
+    return real
 
 
 # ---------- the decision ----------

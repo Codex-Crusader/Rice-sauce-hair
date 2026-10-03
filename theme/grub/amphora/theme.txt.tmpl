@@ -1,0 +1,53 @@
+# GRUB theme "Amphora".
+
+desktop-image: "background.png"
+desktop-color: "#{{bg}}"
+terminal-font: "JetBrainsMono NF Regular 18"
+terminal-box: "select_*.png"
+
+title-text: "ARCH  ·  WINDOWS"
+title-font: "Cinzel Regular 40"
+title-color: "#{{gold}}"
+
+# Boot menu in the center of the screen
++ boot_menu {
+    left = 30%
+    top = 34%
+    width = 40%
+    height = 40%
+    item_font = "Noto Sans Regular 24"
+    item_color = "#{{muted}}"
+    selected_item_font = "Noto Sans Regular 24"
+    selected_item_color = "#{{marble}}"
+    selected_item_pixmap_style = "select_*.png"
+    item_height = 48
+    item_padding = 16
+    item_spacing = 8
+    icon_width = 0
+    icon_height = 0
+    item_icon_space = 0
+    scrollbar = false
+}
+
+# Countdown
++ label {
+    id = "__timeout__"
+    left = 0
+    top = 80%
+    width = 100%
+    align = "center"
+    text = "Booting the selected system in %d seconds"
+    font = "Noto Sans Regular 18"
+    color = "#{{muted}}"
+}
+
+# Key help
++ label {
+    left = 0
+    top = 85%
+    width = 100%
+    align = "center"
+    text = "Up and Down to select  ·  Enter to boot  ·  E to edit"
+    font = "Noto Sans Regular 18"
+    color = "#{{aegean_light}}"
+}

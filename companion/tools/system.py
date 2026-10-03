@@ -6,10 +6,9 @@ import time
 from pathlib import Path
 
 import handoff
-from policy import TERMINAL_ONLY, is_claude_command
+from policy import TERMINAL_ONLY, PathRefused, is_claude_command, safe_path
 from runner import Result
 from tools.common import act, spawn
-from tools.files import resolve
 
 
 # ---------- system settings (small and reversible) ----------
@@ -146,11 +145,12 @@ def security_check(runner, repo):
 scan = {"running": False, "on_done": None}
 
 
-def virus_scan(runner, folder="~/Downloads"):
-    """Start a ClamAV scan of a folder. Read only: nothing is deleted or moved."""
-    p = resolve(folder)
-    if not p:
-        return Result(False, f"{folder} does not exist", final=True)
+def virus_scan(runner, deny, folder="~/Downloads"):
+    """Start a ClamAV scan of a folder in the home folder. Read only: nothing is deleted or moved."""
+    try:
+        p = safe_path(folder, deny)
+    except PathRefused as e:
+        return Result(False, f"refused: {e}. Tell the user plainly.", final=True)
     if scan["running"]:
         return Result(False, "failed: a virus scan is already running. Call stop_virus_scan to stop it.")
     scan["running"] = True

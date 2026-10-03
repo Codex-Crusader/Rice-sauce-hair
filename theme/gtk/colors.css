@@ -1,31 +1,32 @@
 /* GTK colors "Amphora" for adw-gtk3 (GTK 3) and libadwaita (GTK 4).
-   Both read these named colors. Values from ~/dotfiles/theme/palette.sh. */
+   Both read these named colors. The values are in palette.css (made by theme-build). */
+@import url("palette.css");
 
-@define-color accent_color       #c9a15b;
-@define-color accent_bg_color    #8f4a6b;
-@define-color accent_fg_color    #ede6da;
+@define-color accent_color       @gold;
+@define-color accent_bg_color    @wine_light;
+@define-color accent_fg_color    @marble;
 
-@define-color window_bg_color    #0d0608;
-@define-color window_fg_color    #ede6da;
-@define-color view_bg_color      #1a1013;
-@define-color view_fg_color      #ede6da;
+@define-color window_bg_color    @bg;
+@define-color window_fg_color    @marble;
+@define-color view_bg_color      @surface;
+@define-color view_fg_color      @marble;
 
-@define-color headerbar_bg_color       #1a1013;
-@define-color headerbar_fg_color       #ede6da;
-@define-color headerbar_backdrop_color #0d0608;
-@define-color headerbar_border_color   #c9a15b;
+@define-color headerbar_bg_color       @surface;
+@define-color headerbar_fg_color       @marble;
+@define-color headerbar_backdrop_color @bg;
+@define-color headerbar_border_color   @gold;
 
-@define-color sidebar_bg_color   #120a0d;
-@define-color sidebar_fg_color   #ede6da;
-@define-color card_bg_color      #1a1013;
-@define-color card_fg_color      #ede6da;
-@define-color dialog_bg_color    #1a1013;
-@define-color dialog_fg_color    #ede6da;
-@define-color popover_bg_color   #1a1013;
-@define-color popover_fg_color   #ede6da;
+@define-color sidebar_bg_color   @surface_low;
+@define-color sidebar_fg_color   @marble;
+@define-color card_bg_color      @surface;
+@define-color card_fg_color      @marble;
+@define-color dialog_bg_color    @surface;
+@define-color dialog_fg_color    @marble;
+@define-color popover_bg_color   @surface;
+@define-color popover_fg_color   @marble;
 
-@define-color destructive_bg_color #c0503a;
-@define-color destructive_color    #e07a62;
-@define-color error_color          #e07a62;
-@define-color warning_color        #d66a2a;
-@define-color success_color        #a9b878;
+@define-color destructive_bg_color @red;
+@define-color destructive_color    @red_light;
+@define-color error_color          @red_light;
+@define-color warning_color        @terracotta;
+@define-color success_color        @olive_light;

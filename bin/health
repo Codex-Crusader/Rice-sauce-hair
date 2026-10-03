@@ -3,6 +3,7 @@
 # A check runs only when its part is on this machine (NVIDIA driver, Ollama, GRUB, grub-btrfs, a git upstream).
 #   health           print all checks
 #   health --notify  print, and send one notification if anything is wrong
+REPO=$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)
 problems=()
 ok()   { echo "OK    $1"; }
 warn() { echo "WARN  $1"; problems+=("$1"); }
@@ -20,6 +21,8 @@ fi
 
 if [ -n "$HYPRLAND_INSTANCE_SIGNATURE" ]; then
     errors=$(hyprctl configerrors | grep -v '^$')
+    # The running Hyprland can be older than the one on disk (after an update): check with the new one too
+    Hyprland --verify-config >/dev/null 2>&1 || errors+=" (Hyprland --verify-config: the installed version finds errors)"
     [ -z "$errors" ] && ok "Hyprland config has no errors" || warn "Hyprland config errors: $errors"
     hyprctl plugin list 2>/dev/null | grep -q hyprbars && ok "title bars plugin loaded" \
         || warn "title bars plugin not loaded (run: hyprpm update, then log out and in)"
@@ -27,6 +30,13 @@ fi
 
 used=$(df --output=pcent / | tail -1 | tr -dc 0-9)
 [ "$used" -lt 85 ] && ok "disk / ${used}% used" || warn "disk / is ${used}% full"
+
+# Claude Code updates itself, outside pacman: check that it still knows the flags of the companion hand-off
+if [ -f "$REPO/companion/handoff.py" ] && command -v claude >/dev/null; then
+    probe=$(python3 -c "import sys; sys.path.insert(0, '$REPO/companion'); import handoff; from runner import Runner
+r = handoff.flags_ok(Runner()); print(r.text); sys.exit(0 if r.ok else 1)" 2>&1) \
+        && ok "Claude Code knows the hand-off flags" || warn "Claude Code changed its flags (companion hand-off): $probe"
+fi
 
 if command -v ollama >/dev/null; then
     systemctl is-active --quiet ollama && ok "Ollama running" || warn "Ollama service is not running"
@@ -37,13 +47,15 @@ if command -v checkupdates >/dev/null; then
     [ "$n" -lt 50 ] && ok "$n updates waiting" || warn "$n updates waiting (run: sysupdate)"
 fi
 
-n=$(git -C ~/dotfiles status --porcelain 2>/dev/null | wc -l)
-[ "$n" -eq 0 ] && ok "dotfiles committed" || warn "$n uncommitted changes in ~/dotfiles"
-if git -C ~/dotfiles rev-parse --abbrev-ref @{u} >/dev/null 2>&1; then
-    n=$(git -C ~/dotfiles log --oneline @{u}..HEAD | wc -l)
-    [ "$n" -eq 0 ] && ok "dotfiles pushed" || warn "$n commits not pushed (run: git -C ~/dotfiles push)"
+n=$(git -C "$REPO" status --porcelain 2>/dev/null | wc -l)
+[ "$n" -eq 0 ] && ok "dotfiles committed" || warn "$n uncommitted changes in $REPO"
+if git -C "$REPO" rev-parse --abbrev-ref @{u} >/dev/null 2>&1; then
+    n=$(git -C "$REPO" log --oneline @{u}..HEAD | wc -l)
+    [ "$n" -eq 0 ] && ok "dotfiles pushed" || warn "$n commits not pushed (run: git -C $REPO push)"
 fi
-~/dotfiles/bin/link --check >/dev/null 2>&1 && ok "dotfiles links correct" || warn "dotfiles links are wrong (run: link --check, then link)"
+"$REPO/bin/theme-build" --check >/dev/null 2>&1 && ok "theme files match the palette" \
+    || warn "theme files are out of date or hold color values (run: theme-build --check)"
+"$REPO/bin/link" --check >/dev/null 2>&1 && ok "dotfiles links correct" || warn "dotfiles links are wrong (run: link --check, then link)"
 
 # Boot: GRUB must be first, or the laptop starts Windows directly (Windows updates can change this)
 boot=$(efibootmgr 2>/dev/null)
@@ -54,9 +66,23 @@ if [ -n "$grub" ]; then
         || warn "GRUB is not first in the boot order (fix: sudo efibootmgr -o $grub,$(echo ",$order," | sed "s/,$grub,/,/" | sed 's/^,//; s/,$//'))"
 fi
 if has grub-btrfs; then
-    grep -q 'grub-btrfs-overlayfs' /etc/mkinitcpio.conf && ok "snapshots can boot (overlayfs hook)" \
-        || warn "snapshot boot hook missing in /etc/mkinitcpio.conf"
+    grep -qs 'grub-btrfs-overlayfs' /etc/mkinitcpio.conf /etc/mkinitcpio.conf.d/*.conf && ok "snapshots can boot (overlayfs hook)" \
+        || warn "snapshot boot hook missing in /etc/mkinitcpio.conf and mkinitcpio.conf.d"
 fi
+
+# pacman keeps a changed config file and writes the new package version beside it: merge with pacdiff
+new=$(find /etc -xdev \( -name '*.pacnew' -o -name '*.pacsave' \) 2>/dev/null | tr '\n' ' ')
+[ -z "$new" ] && ok "no .pacnew files" || warn "config files to merge: $new(run: sudo DIFFPROG='git diff --no-index' pacdiff)"
+
+# The copies in system/etc must match /etc, or a change on one side is lost (files only root can read are skipped)
+drift=()
+while IFS= read -r -d '' f; do
+    live=/etc/${f#"$REPO/system/etc/"}
+    [ -r "$live" ] || [ ! -e "$live" ] || continue
+    cmp -s "$f" "$live" || drift+=("$live")
+done < <(find "$REPO/system/etc" \( -type f -o -type l \) -print0)
+[ ${#drift[@]} -eq 0 ] && ok "system/etc matches /etc" \
+    || warn "system/etc and /etc differ: ${drift[*]} (compare, then copy the correct side)"
 
 # Virus signatures older than 3 days: the daily update stopped
 sig=$(stat -c %Y /var/lib/clamav/daily.cvd /var/lib/clamav/daily.cld 2>/dev/null | sort -n | tail -1)

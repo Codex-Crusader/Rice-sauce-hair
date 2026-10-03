@@ -5,7 +5,8 @@ Each tool has a tier (see policy.py, which makes every safety decision):
   1  small, reversible    runs at once, she says what she did
   1b closes something     she asks "yes or no?" first
   anything bigger         not a tool: the planner hands it to Claude Code (handoff.py)
-A tool only does its action. It makes no safety decision.
+A tool only does its action. It makes no safety decision, with one exception: the file tools
+call policy.safe_path themselves, so the home-folder boundary holds for every caller.
 
 Every tool returns a Result. Tools that run outside commands get a Runner as their
 first parameter (build_tools binds it), so a test can give them a fake runner.
@@ -24,7 +25,7 @@ from tools.system import scan  # noqa: F401  (main.py sets scan["on_done"])
 
 def build_tools(chrome, runner, config, store):
     """Return {name: Tool}. chrome is a ChromeBridge (tab tools), runner runs outside commands."""
-    r, repo = runner, config.repo
+    r, repo, deny = runner, config.repo, config.deny_paths
     home_repo = "~/" + str(repo.relative_to(Path.home())) if repo.is_relative_to(Path.home()) else str(repo)
     s = {"type": "string"}
     n = {"type": "number"}
@@ -69,14 +70,14 @@ def build_tools(chrome, runner, config, store):
              {"words": s, "kind": {**s, "enum": ["any", "document", "image", "video", "audio", "code", "archive", "folder"]}},
              ["words"], partial(files.find_files, r)),
         Tool("open_file", TIER_SMALL, "Open a file with its default app. Use a path from find_files.",
-             {"path": s}, ["path"], partial(files.open_file, r)),
+             {"path": s}, ["path"], partial(files.open_file, r, deny)),
         Tool("show_in_file_manager", TIER_SMALL, "Open a folder (or the folder of a file) in the file manager. "
              f"Common folders: ~/Pictures, ~/Downloads, ~/Documents, ~/Desktop, ~/Music, ~/Videos, {home_repo}.",
-             {"path": s}, ["path"], partial(files.show_in_file_manager, r)),
+             {"path": s}, ["path"], partial(files.show_in_file_manager, r, deny)),
         Tool("security_check", TIER_READ, "Security check: installed packages with known security holes, and the health check.",
              {}, [], partial(system.security_check, r, repo)),
         Tool("virus_scan", TIER_READ, "Start a virus scan of a folder with ClamAV, in the background (default "
-             "~/Downloads). Nothing is deleted. The result comes later on its own.", {"folder": s}, [], partial(system.virus_scan, r)),
+             "~/Downloads). Nothing is deleted. The result comes later on its own.", {"folder": s}, [], partial(system.virus_scan, r, deny)),
         Tool("stop_virus_scan", TIER_SMALL, "Stop the running virus scan.", {}, [], partial(system.stop_virus_scan, r)),
         Tool("recall", TIER_READ, "Search your memories about the user.", {"words": s}, ["words"], partial(memory.recall, store)),
         Tool("forget", TIER_CONFIRM, "Forget memories that contain these words.", {"words": s}, ["words"], partial(memory.forget, store),

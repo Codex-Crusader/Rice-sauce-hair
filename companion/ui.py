@@ -10,35 +10,11 @@ gi.require_version("Gtk4LayerShell", "1.0")
 from gi.repository import Gdk, Gio, GLib, Gtk  # noqa: E402
 from gi.repository import Gtk4LayerShell as LayerShell  # noqa: E402
 
+
 AVATAR_SIZE = 170
 KEYBOARD_SECONDS = 20  # Super+A with nothing typed: the keyboard goes back after this time
 
-CSS = b"""
-window.companion { background: transparent; }
-.bubble {
-    background-color: rgba(26, 16, 19, 0.94);
-    border: 1px solid #c9a15b;
-    border-radius: 14px;
-    padding: 10px 14px;
-}
-.bubble label { color: #ede6da; font-family: "Noto Sans"; font-size: 11pt; }
-.bubble label.name { color: #c9a15b; font-family: "Cinzel"; font-weight: bold; font-size: 9pt; }
-.bubble button { background: #2a1c20; color: #ede6da; border: 1px solid rgba(201,161,91,.6);
-                 border-radius: 8px; padding: 2px 14px; }
-.bubble button.yes { background: #6b2d4a; }
-entry.talk {
-    background-color: rgba(13, 6, 8, 0.88);
-    color: #ede6da;
-    border: 1px solid rgba(201, 161, 91, 0.7);
-    border-radius: 12px;
-    padding: 4px 10px;
-    font-family: "Noto Sans";
-}
-entry.talk:focus-within { border-color: #c9a15b; }
-popover.menu contents { background-color: #1a1013; border: 1px solid #c9a15b; border-radius: 10px; }
-popover.menu modelbutton { color: #ede6da; border-radius: 6px; }
-popover.menu modelbutton:hover { background-color: #6b2d4a; }
-"""
+CSS_FILE = Path(__file__).with_name("ui.css")  # colors by name from theme/gtk/palette.css
 
 
 def place_in_corner(window, right, bottom, keyboard):
@@ -151,7 +127,7 @@ class CompanionWindow(Gtk.ApplicationWindow):
 
     def _load_css(self):
         provider = Gtk.CssProvider()
-        provider.load_from_data(CSS)
+        provider.load_from_path(str(CSS_FILE))
         Gtk.StyleContext.add_provider_for_display(
             Gdk.Display.get_default(), provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
 

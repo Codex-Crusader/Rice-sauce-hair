@@ -4,6 +4,8 @@ The model calls (llm.plan, llm.speak) are replaced by fakes; tools are recorded,
 
   python3 -m unittest discover -s tests -p 'test_*.py'     (from the companion folder)
 """
+import os
+import shutil
 import sys
 import tempfile
 import time
@@ -29,6 +31,37 @@ from session import Question, Session, Work  # noqa: E402
 from store import Store  # noqa: E402
 
 TMP = Path(tempfile.mkdtemp(prefix="companion-test-"))
+
+# ---------- a fixed machine: the tests do not depend on what is installed here ----------
+
+PROGRAMS = {"kitty", "ls", "cat", "find", "rm", "git", "df", "pacman", "systemctl", "journalctl", "btop", "health"}
+APPS = {"kitty": "Name=kitty\nCategories=System;TerminalEmulator;",
+        "com.google.Chrome": "Name=Google Chrome\nCategories=Network;WebBrowser;",
+        "pycharm": "Name=PyCharm Community Edition\nCategories=Development;IDE;",
+        "hidden": "Name=Hidden\nNoDisplay=true"}
+PATCHES = []
+
+
+def setUpModule():
+    apps_dir = TMP / "applications"
+    apps_dir.mkdir()
+    for app_id, body in APPS.items():
+        (apps_dir / f"{app_id}.desktop").write_text(f"[Desktop Entry]\n{body}\n")
+    PATCHES.extend([
+        mock.patch("shutil.which", lambda name: f"/usr/bin/{name}" if name in PROGRAMS else None),
+        mock.patch.object(policy, "shell_aliases", lambda: frozenset({"prime-run"})),
+        mock.patch.object(tools.apps, "APP_DIRS", [apps_dir]),
+        mock.patch.dict(tools.apps._cache, {"key": None, "entries": []}),
+    ])
+    for patch in PATCHES:
+        patch.start()
+
+
+def tearDownModule():
+    for patch in reversed(PATCHES):
+        patch.stop()
+    shutil.rmtree(TMP, ignore_errors=True)
+
 
 
 class FakeRunner(Runner):
@@ -355,6 +388,25 @@ class HandoffCommands(unittest.TestCase):
             self.assertIn("failed", handoff.ask(FakeRunner(), "x", TMP).text)  # empty output is not JSON
 
 
+class FlagProbe(unittest.TestCase):
+    """health asks if Claude Code still knows the hand-off flags, with no API request."""
+
+    def probe(self, output):
+        runner = FakeRunner()
+        runner.run = lambda cmd, **k: runner.calls.append(cmd) or Result(False, output)
+        return handoff.flags_ok(runner), runner.calls[0]
+
+    def test_all_known(self):
+        result, cmd = self.probe("error: unknown option '--zz-flag-probe'")
+        self.assertTrue(result.ok)
+        self.assertEqual(cmd[-1], handoff.PROBE)  # the probe comes after every real flag
+
+    def test_renamed_flag(self):
+        result, _ = self.probe("error: unknown option '--max-turns'")
+        self.assertFalse(result.ok)
+        self.assertIn("--max-turns", result.text)
+
+
 class Candidates(unittest.TestCase):
     """R2.2: the best matches for vague words, from fake apps, windows, tabs, and files."""
     APPS = [("pycharm", "PyCharm Community Edition", None), ("kitty", "kitty", None),
@@ -628,10 +680,75 @@ class Memory(unittest.TestCase):
         self.assertEqual(len(self.store.memory()), tools.memory.MEMORY_LIMIT)
 
 
+class FileBoundary(unittest.TestCase):
+    """The file tools stay in the home folder, out of deny folders, and never open a launcher."""
+
+    def setUp(self):
+        self.home = Path(tempfile.mkdtemp(dir=TMP)).resolve()
+        for name in ("notes.txt", ".ssh/id_ed25519", "run.sh", "evil.desktop", "Pictures/cat.png"):
+            (self.home / name).parent.mkdir(parents=True, exist_ok=True)
+            (self.home / name).write_text("x")
+        (self.home / "tool").write_text("#!/bin/sh\n")
+        os.chmod(self.home / "tool", 0o755)
+        (self.home / "etc-link").symlink_to("/etc")
+        self.deny = [self.home / ".ssh"]
+        self.patch = mock.patch("pathlib.Path.home", lambda: self.home)
+        self.patch.start()
+        self.addCleanup(self.patch.stop)
+
+    def refused(self, fn, path, why):
+        with self.assertRaises(policy.PathRefused) as e:
+            fn(path, self.deny)
+        self.assertIn(why, str(e.exception))
+
+    def test_paths_inside_home_are_allowed(self):
+        for path in ("~/notes.txt", "notes.txt", str(self.home / "Pictures"), "/home/someone/notes.txt"):
+            self.assertTrue(policy.safe_to_open(path, self.deny).is_relative_to(self.home), path)
+
+    def test_outside_home_is_refused(self):
+        for path in ("/etc/passwd", "~/" + "../" * 30 + "etc/passwd", "~/etc-link/passwd", "/"):
+            self.refused(policy.safe_path, path, "outside the home folder")
+
+    def test_deny_folders_are_refused(self):
+        self.refused(policy.safe_path, "~/.ssh/id_ed25519", "private folder")
+        self.refused(policy.safe_path, "~/.ssh", "private folder")
+
+    def test_launchers_are_not_opened(self):
+        for path in ("~/run.sh", "~/evil.desktop", "~/tool"):
+            self.refused(policy.safe_to_open, path, "would run it")
+        self.assertEqual(policy.safe_path("~/run.sh", self.deny).name, "run.sh")  # its folder may still be shown
+
+    def test_missing_path(self):
+        self.refused(policy.safe_path, "~/nothing.txt", "does not exist")
+
+    def test_tools_refuse_and_run_nothing(self):
+        runner = FakeRunner()
+        for result in (tools.files.open_file(runner, self.deny, "/etc/passwd"),
+                       tools.files.open_file(runner, self.deny, "~/run.sh"),
+                       tools.files.show_in_file_manager(runner, self.deny, "~/.ssh"),
+                       tools.system.virus_scan(runner, self.deny, "/usr")):
+            self.assertFalse(result.ok)
+            self.assertTrue(result.final)
+        self.assertEqual(runner.calls, [])
+        self.assertTrue(tools.files.open_file(runner, self.deny, "~/notes.txt").ok)
+        self.assertEqual(runner.calls, [["xdg-open", str(self.home / "notes.txt")]])
+
+    def test_find_files_shows_the_newest(self):
+        files = [self.home / f"f{i}.txt" for i in range(30)]
+        for i, f in enumerate(files):
+            f.write_text("x")
+            os.utime(f, (1000 + i, 1000 + i))
+        runner = FakeRunner()
+        runner.run = lambda cmd, **k: Result(True, "\n".join(map(str, files)))
+        rows = tools.files.find_files(runner, "f").text.splitlines()
+        self.assertTrue(rows[0].startswith("~/f29.txt"))
+        self.assertEqual(rows[-1], "... and 10 more")
+
+
 class Results(unittest.TestCase):
     def test_failed_commands_are_failures(self):
-        self.assertFalse(tools.common.act(Runner(), ["false"], "done").ok)
-        self.assertEqual(tools.common.act(Runner(), ["true"], "done"), Result(True, "done"))
+        self.assertFalse(tools.common.act(Runner(), [sys.executable, "-c", "exit(1)"], "done").ok)
+        self.assertEqual(tools.common.act(Runner(), [sys.executable, "-c", ""], "done"), Result(True, "done"))
 
     def test_brightness_never_zero(self):
         runner = FakeRunner()

@@ -1,25 +1,26 @@
-/* ReGreet login screen. Theme "Amphora" (colors from ~/dotfiles/theme/palette.sh). */
-window { background-color: #0d0608; }
+/* ReGreet login screen. Theme "Amphora": colors by name from palette.css (a copy of theme/gtk/palette.css). */
+@import url("palette.css");
+window { background-color: @bg; }
 
 /* The login box */
 frame.background, box.background, .background frame {
-    background-color: rgba(13, 6, 8, 0.82);
-    border: 1px solid #c9a15b;
+    background-color: alpha(@bg, 0.82);
+    border: 1px solid @gold;
     border-radius: 14px;
 }
 
-label { color: #ede6da; }
-label.title, .clock, #clock { font-family: "Cinzel"; color: #c9a15b; font-weight: 700; }
+label { color: @marble; }
+label.title, .clock, #clock { font-family: "Cinzel"; color: @gold; font-weight: 700; }
 
 entry, combobox button, dropdown button {
-    background-color: #1a1013;
-    color: #ede6da;
-    border: 1px solid rgba(201, 161, 91, 0.6);
+    background-color: @surface;
+    color: @marble;
+    border: 1px solid alpha(@gold, 0.6);
     border-radius: 10px;
 }
-entry:focus-within { border-color: #c9a15b; }
+entry:focus-within { border-color: @gold; }
 
 button { border-radius: 10px; }
-button.suggested-action { background-color: #6b2d4a; color: #ede6da; }
-button.suggested-action:hover { background-color: #8f4a6b; }
-button.destructive-action { background-color: #c0503a; color: #0d0608; }
+button.suggested-action { background-color: @wine; color: @marble; }
+button.suggested-action:hover { background-color: @wine_light; }
+button.destructive-action { background-color: @red; color: @bg; }

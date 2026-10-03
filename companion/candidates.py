@@ -12,7 +12,7 @@ from pathlib import Path
 
 from planner import Step
 from tools.apps import app_categories, desktop_entries, find_app
-from tools.files import KINDS
+from tools.files import KINDS, SCAN_LIMIT, newest, short
 
 LIMIT = 5
 # "open kitty" means a new one; "bring up kitty" means the open window
@@ -110,15 +110,13 @@ def files(request, words, runner, home):
     age = next((a for pattern, a in FILE_TIMES if re.search(pattern, request, re.I)), "")
     names = [w for w in words if not FILE_WORDS.search(w) and not any(re.search(p, w) for p, _ in FILE_TIMES)]
     cmd = ["fd", "--type", "f", "--ignore-case", "--absolute-path", "--exclude", ".cache", "--exclude", ".local/share",
-           "--max-results", "50", *[a for e in exts for a in ("--extension", e)]]
+           "--max-results", str(SCAN_LIMIT), *[a for e in exts for a in ("--extension", e)]]
     if age:
         cmd += ["--changed-within", age]
     cmd += [".*".join(re.escape(w) for w in names) or ".", str(home)]
     paths = [Path(p) for p in runner.run(cmd, timeout=10).text.splitlines() if p.startswith("/")]
-    paths.sort(key=lambda p: p.stat().st_mtime if p.exists() else 0, reverse=True)
     out = []
-    for i, p in enumerate(paths[:LIMIT]):
-        when = time.strftime("%d %b %H:%M", time.localtime(p.stat().st_mtime)) if p.exists() else "?"
-        shown = str(p).replace(str(home), "~", 1)
-        out.append(Candidate(f"file: {shown} (changed {when})", Step("open_file", {"path": str(p)}), 3 - 0.3 * i))
+    for i, (changed, p) in enumerate(newest(paths, LIMIT)):
+        when = time.strftime("%d %b %H:%M", time.localtime(changed)) if changed else "?"
+        out.append(Candidate(f"file: {short(p, home)} (changed {when})", Step("open_file", {"path": str(p)}), 3 - 0.3 * i))
     return out

@@ -56,6 +56,6 @@ If you use snapper with snap-pac, every pacman run makes a snapshot before and a
 | Command | What it does |
 |---|---|
 | `health` | Checks the system. Each problem is one `WARN` line. |
-| `sysupdate` | Updates pacman packages, the title bar plugin, and Flatpaks. |
+| `sysupdate` | Updates pacman packages, the title bar plugin, and Flatpaks. It checks the Hyprland config with the new version, then runs `health`. |
 | `journalctl -b -p err` | Errors since this boot. |
 | `systemctl --user status hypr-desktop.target` | State of the desktop parts. |

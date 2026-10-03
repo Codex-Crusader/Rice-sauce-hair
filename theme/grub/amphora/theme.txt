@@ -1,4 +1,5 @@
-# GRUB theme "Amphora". Colors from ~/dotfiles/theme/palette.sh.
+# Made by bin/theme-build from theme.txt.tmpl and theme/palette.sh. Edit the .tmpl file.
+# GRUB theme "Amphora".
 
 desktop-image: "background.png"
 desktop-color: "#0d0608"

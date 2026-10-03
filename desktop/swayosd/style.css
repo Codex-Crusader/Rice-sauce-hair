@@ -1,12 +1,13 @@
 /* SwayOSD popups (volume, brightness, Caps Lock). Theme "Amphora". */
+@import url("palette.css");
 window#osd {
-    background: rgba(13, 6, 8, 0.88);
-    border: 1px solid #c9a15b;
+    background: alpha(@bg, 0.88);
+    border: 1px solid @gold;
     border-radius: 16px;
     padding: 12px 18px;
 }
 #container { margin: 4px; }
-image, label { color: #ede6da; }
+image, label { color: @marble; }
 progressbar { min-height: 6px; border-radius: 999px; }
-progressbar trough { background: #2a1c20; border-radius: 999px; }
-progressbar progress { background: #c9a15b; border-radius: 999px; }
+progressbar trough { background: @overlay; border-radius: 999px; }
+progressbar progress { background: @gold; border-radius: 999px; }

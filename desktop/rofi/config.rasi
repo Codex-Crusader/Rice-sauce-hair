@@ -1,3 +1,4 @@
+// Made by bin/theme-build from config.rasi.tmpl and theme/palette.sh. Edit the .tmpl file.
 /* Rofi launcher. Theme "Amphora". */
 configuration {
     modi: "drun,run,window";

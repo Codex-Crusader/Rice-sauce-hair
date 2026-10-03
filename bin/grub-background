@@ -6,16 +6,18 @@
 set -e
 src="$1"
 [ -f "$src" ] || { echo "Usage: grub-background <image>"; exit 1; }
-out="$HOME/dotfiles/theme/grub/amphora/background.png"
+repo=$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)
+. "$repo/theme/palette.sh"  # BG, GOLD
+out="$repo/theme/grub/amphora/background.png"
 magick "$src" -resize 1920x1080^ -gravity center -extent 1920x1080 \
     -brightness-contrast -8x0 \
-    \( -size 1920x1080 xc:none -fill 'rgba(13,6,8,0.80)' -stroke 'rgba(201,161,91,0.6)' \
+    \( -size 1920x1080 xc:none -fill "#${BG}cc" -stroke "#${GOLD}99" \
        -strokewidth 1 -draw 'roundrectangle 537,140 1383,950 18,18' \) \
     -composite -alpha off "$out"
 theme=/boot/grub/themes/amphora
 if [ ! -d "$theme" ]; then
     echo "Made $out, but the theme is not installed in $theme."
-    echo "Install it first: sudo cp -r ~/dotfiles/theme/grub/amphora /boot/grub/themes/"
+    echo "Install it first: sudo cp -r $repo/theme/grub/amphora /boot/grub/themes/"
     exit 1
 fi
 [ -f "$theme/background.png" ] && sudo cp -a "$theme/background.png" "$theme/background.png.bak"

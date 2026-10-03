@@ -5,12 +5,14 @@
 -- The plugin loads after the first config pass. Skip until it is loaded.
 if not (hl.plugin and hl.plugin.hyprbars) then return end
 
+local c = require("palette")  -- made by bin/theme-build from theme/palette.sh
+
 hl.config({
     plugin = {
         hyprbars = {
             bar_height                 = 28,
-            bar_color                  = "rgba(1a1013ee)",
-            ["col.text"]               = "rgba(ede6daff)",
+            bar_color                  = c.rgba(c.surface, "ee"),
+            ["col.text"]               = c.rgba(c.marble),
             bar_text_font              = "Cinzel",
             bar_text_size              = 11,
             bar_text_weight            = "bold",
@@ -21,7 +23,7 @@ hl.config({
             bar_blur                   = true,
             bar_part_of_window         = true,
             bar_precedence_over_border = true,
-            inactive_button_color      = "rgba(4e414fff)",
+            inactive_button_color      = c.rgba(c.ash),
             on_double_click            = "hyprctl dispatch 'hl.dsp.window.fullscreen({ mode = \"maximized\" })'",
         },
     },
@@ -30,13 +32,13 @@ hl.config({
 local function button(color, icon, action)
     hl.plugin.hyprbars.add_button({
         bg_color = color,
-        fg_color = "rgb(0d0608)",
+        fg_color = c.rgba(c.bg),
         size     = 14,
         icon     = icon,
         action   = action,
     })
 end
 
-button("rgb(c0503a)", "󰖭", "hyprctl dispatch 'hl.dsp.window.close()'")                          -- close
-button("rgb(c9a15b)", "󰖯", "hyprctl dispatch 'hl.dsp.window.fullscreen({ mode = \"maximized\" })'") -- maximize
-button("rgb(5b6fa8)", "󰖰", "hyprctl dispatch Desk.minimize")                                      -- minimize
+button(c.rgba(c.red), "󰖭", "hyprctl dispatch 'hl.dsp.window.close()'")                               -- close
+button(c.rgba(c.gold), "󰖯", "hyprctl dispatch 'hl.dsp.window.fullscreen({ mode = \"maximized\" })'") -- maximize
+button(c.rgba(c.aegean_light), "󰖰", "hyprctl dispatch Desk.minimize")                                -- minimize

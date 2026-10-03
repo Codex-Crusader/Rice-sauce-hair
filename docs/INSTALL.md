@@ -132,26 +132,37 @@ sudo install -Dm644 ~/dotfiles/system/safe-mode/hyprland-safe.desktop /usr/share
 
 ```sh
 sudo cp -r ~/dotfiles/theme/grub/amphora /boot/grub/themes/
-# In /etc/default/grub: GRUB_THEME="/boot/grub/themes/amphora/theme.txt"
+sudo install -Dm644 ~/dotfiles/system/etc/default/grub.d/50-dotfiles.cfg /etc/default/grub.d/50-dotfiles.cfg
 sudo grub-mkconfig -o /boot/grub/grub.cfg
 ```
 
 The background is black. To use an image: `~/dotfiles/bin/grub-background <image>`.
 
+### GRUB updates
+
+`system/etc/pacman.d/hooks/95-grub-install.hook` installs the new GRUB to the EFI partition after each GRUB
+package update. Without it, the GRUB program and its modules can have different versions, and the boot can stop.
+The hook assumes the EFI partition at `/boot/efi` and the boot entry name `GRUB`. Check yours first:
+`findmnt -t vfat` and `efibootmgr`. Change the hook if they are different, then copy it:
+
+```sh
+sudo install -Dm644 ~/dotfiles/system/etc/pacman.d/hooks/95-grub-install.hook /etc/pacman.d/hooks/95-grub-install.hook
+```
+
 ### Hybrid GPU laptops (AMD or Intel iGPU plus NVIDIA)
 
 Hyprland can run on the iGPU only, so the NVIDIA GPU can sleep.
 
-1. Find the PCI address of the iGPU: `lspci -D | grep VGA`.
-2. Put that address in `system/etc/udev/rules.d/61-gpu-names.rules`, then copy the file to
-   `/etc/udev/rules.d/` and reboot. Check that `/dev/dri/amd-igpu` exists.
-3. `shell/profile-gpu.sh` then sets `AQ_DRM_DEVICES` by itself for text logins.
-4. For greetd: remove the `#` from the `WLR_DRM_DEVICES` line in `/etc/greetd/config.toml`
+1. Copy `system/etc/udev/rules.d/61-gpu-names.rules` to `/etc/udev/rules.d/` and reboot.
+   Check that `/dev/dri/amd-igpu` exists. The rule matches the `amdgpu` driver. For an Intel iGPU,
+   change `amdgpu` to `i915` (or `xe`) in the rule. Do not use the rule when the computer has two AMD GPUs.
+2. `shell/profile-gpu.sh` then sets `AQ_DRM_DEVICES` by itself for text logins.
+3. For greetd: remove the `#` from the `WLR_DRM_DEVICES` line in `/etc/greetd/config.toml`
    and from the `[env]` lines in `/etc/greetd/regreet.toml`.
-5. Start an app on the NVIDIA GPU with `prime-run <app>`.
+4. Start an app on the NVIDIA GPU with `prime-run <app>`.
 
 ### Snapshots, memory guard, and others
 
-`system/etc/` also has the configs for snapper with snap-pac and grub-btrfs (`mkinitcpio.conf`), systemd-oomd,
+`system/etc/` also has the configs for snapper with snap-pac and grub-btrfs (`mkinitcpio.conf.d/`), systemd-oomd,
 Bluetooth, reflector, and pacman. They are examples from the author's machine. Compare them with your files.
 Do not copy them blindly.

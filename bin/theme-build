@@ -1,0 +1,138 @@
+#!/usr/bin/env python3
+"""Make the theme files from theme/palette.sh, the one source of all theme colors.
+
+  theme-build           write the files that changed
+  theme-build --check   change nothing; exit 1 when a file is out of date or holds a color value
+
+Two kinds of output:
+  1. Palette files that the apps import, then use the color names:
+     GTK CSS (theme/gtk/palette.css): @gold and alpha(@bg, 0.8). Hyprland Lua (palette.lua): c.gold, c.rgba().
+  2. Templates: X.tmpl makes X. {{gold}} becomes c9a15b (no "#"); {{gold:rgb}} becomes 201, 161, 91.
+     For formats that cannot import a file or add alpha to a name: kitty, Qt, GRUB, rofi, hyprlock.
+Python reads palette.sh itself (see read_palette in companion/ui.py and desktop/widgets/desk.py).
+"""
+import re
+import subprocess
+import sys
+from pathlib import Path
+
+REPO = Path(__file__).resolve().parents[1]
+PALETTE = REPO / "theme/palette.sh"
+SOURCE = "Made by bin/theme-build from theme/palette.sh. Do not edit: change the palette, then run theme-build."
+
+# Only generated files hold color values. Other files use the names. Exceptions: black and white
+# (shadows), and files whose values are not theme colors.
+# bin/theme-build: its comments show the formats. system/safe-mode/safe.lua: safe mode must work when the normal config is broken, so it reads no other file.
+STRAY_OK = {"system/etc/bluetooth/main.conf", "bin/publish-public", "apps/pcmanfm-qt/default/settings.conf",
+            "system/safe-mode/safe.lua", "bin/theme-build"}
+NEUTRAL = {"000000", "ffffff"}
+# "#c9a15b", Qt "#ffc9a15b", Lua 0xaac9a15b, Hyprland rgba(c9a15bff), CSS rgba(201, 161, 91, 0.5)
+COLOR = re.compile(r"(?:#(?:[0-9a-fA-F]{2})?|0x(?:[0-9a-fA-F]{2})?|rgba?\()([0-9a-fA-F]{6})(?:[0-9a-fA-F]{2})?\b|"
+                   r"rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)")
+
+
+def read_palette():
+    """{name: "rrggbb"} in file order, names in lower case."""
+    pairs = re.findall(r"^([A-Z_]+)=([0-9A-Fa-f]{6})\b", PALETTE.read_text(), re.M)
+    return {name.lower(): value.lower() for name, value in pairs}
+
+
+def palette_files(p):
+    """{repo path: text} of the palette file for each format."""
+    width = max(map(len, p))
+    rows = lambda fmt: "".join(fmt.format(name=n, pad=" " * (width - len(n)), hex=v) for n, v in p.items())
+    return {
+        "theme/gtk/palette.css": f"/* {SOURCE} */\n" + rows("@define-color {name}{pad} #{hex};\n"),
+        "desktop/hypr/palette.lua": f"-- {SOURCE}\nlocal c = {{\n" + rows('    {name}{pad} = "{hex}",\n') + "}\n\n"
+                                    "-- rgba(c.gold, \"cc\") -> \"rgba(c9a15bcc)\" for Hyprland. alpha: 2 hex digits (default ff).\n"
+                                    "function c.rgba(hex, alpha)\n"
+                                    "    return \"rgba(\" .. hex .. (alpha or \"ff\") .. \")\"\n"
+                                    "end\n\nreturn c\n",
+    }
+
+
+COMMENT = {".rasi": "//", ".lua": "--", ".css": "//"}  # line comment of each output type (default "#")
+
+
+def render(template, p):
+    def value(m):
+        name, form = m.groups()
+        if name not in p:
+            raise SystemExit(f"{template}: {{{{{name}}}}} is not in palette.sh")
+        return ", ".join(str(int(p[name][i:i + 2], 16)) for i in (0, 2, 4)) if form == "rgb" else p[name]
+    body = re.sub(r"\{\{(\w+)(?::(rgb))?\}\}", value, (REPO / template).read_text())
+    comment = COMMENT.get(Path(template).with_suffix("").suffix, "#")
+    return f"{comment} Made by bin/theme-build from {Path(template).name} and theme/palette.sh. Edit the .tmpl file.\n" + body
+
+
+def tracked(pattern=None):
+    args = ["git", "-C", str(REPO), "ls-files"] + ([pattern] if pattern else [])
+    return subprocess.run(args, check=True, capture_output=True, text=True).stdout.splitlines()
+
+
+def outputs(p):
+    files = palette_files(p)
+    for template in tracked("*.tmpl"):
+        files[template.removesuffix(".tmpl")] = render(template, p)
+    return files
+
+
+def stray_colors(generated):
+    """(path, line number, value) of each color value outside the generated files."""
+    skip = set(generated) | STRAY_OK | {"theme/palette.sh"}
+    found = []
+    for path in tracked():
+        f = REPO / path
+        if path in skip or path.startswith("public/") or f.is_symlink() or not f.is_file():
+            continue
+        try:
+            lines = f.read_text().splitlines()
+        except UnicodeDecodeError:
+            continue  # images, fonts
+        for n, line in enumerate(lines, 1):
+            for m in COLOR.finditer(line):
+                value = (m.group(1) or "%02x%02x%02x" % tuple(int(x) for x in m.groups()[1:])).lower()
+                if value not in NEUTRAL:
+                    found.append((path, n, m.group(0)))
+    return found
+
+
+AT_RULES = {"import", "define-color", "media", "keyframes", "font-face", "charset", "supports"}
+
+
+def unknown_names(p):
+    """(path, name) for each @name in a CSS file that is not a palette name and not defined in that file.
+    GTK does not report an unknown name: the color is only missing on screen."""
+    found = []
+    for path in tracked("*.css"):
+        text = (REPO / path).read_text()
+        defined = set(p) | set(re.findall(r"@define-color\s+([\w-]+)", text))
+        for name in sorted(set(re.findall(r"@([a-zA-Z_][\w-]*)", text)) - defined - AT_RULES):
+            found.append((path, name))
+    return found
+
+
+def main():
+    check = "--check" in sys.argv[1:]
+    p = read_palette()
+    files = outputs(p)
+    stale = [path for path, text in files.items()
+             if not (REPO / path).exists() or (REPO / path).read_text() != text]
+    if not check:
+        for path in stale:
+            (REPO / path).write_text(files[path])
+            print(f"wrote {path}")
+        stale = []
+    stray = stray_colors(files)
+    unknown = unknown_names(p)
+    for path in stale:
+        print(f"out of date: {path} (run: theme-build)")
+    for path, n, value in stray:
+        print(f"color value, not a palette name: {path}:{n} {value}")
+    for path, name in unknown:
+        print(f"unknown color name: {path} @{name}")
+    sys.exit(1 if stale or stray or unknown else 0)
+
+
+if __name__ == "__main__":
+    main()

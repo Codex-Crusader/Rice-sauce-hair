@@ -51,6 +51,10 @@ Learned words count before the built-in aliases.
   as labeled data, never as instructions.
 - `remember` and `tell_claude` ask first unless your own message asked for them.
 - A message typed into Claude Code is plain text only: it cannot start with `!`, `/`, `#`, or `-`.
+- **Files**: the file tools (`open_file`, `show_in_file_manager`, `virus_scan`) check each path in code
+  (`safe_path` in `policy.py`). The path must be in the home folder after symlinks are followed, and not
+  in a deny folder. `open_file` also refuses scripts, `.desktop` files, and executable files, because
+  opening them would run a program.
 
 ## Hand-off to Claude Code
 
@@ -75,7 +79,7 @@ questions, or an empty folder of her own. It is never the home folder.
 
 Her own model is local. **Path A and Path B send the brief to Anthropic** through your Claude account,
 so she is not fully local while she hands a task off. Paths on the deny list never go into a brief and
-are never the working folder:
+are never the working folder. The file tools refuse them too:
 
 ```toml
 # persona.toml
@@ -92,7 +96,7 @@ deny = ["~/.ssh", "~/.gnupg", ...]
 | `session.py` | One worker thread, the queue, all state, and the flow of a request |
 | `planner.py` | The router and the plan call (Decision) |
 | `candidates.py` | The best matches for vague words |
-| `policy.py` | The one safety decision (Verdict), and the command allowlist |
+| `policy.py` | The one safety decision (Verdict), the command allowlist, the file boundary |
 | `voice.py` | The speak call and the cleanup of her reply |
 | `handoff.py` | Path A, Path B, the brief, the working folder, the deny list |
 | `context.py` | The screen snapshot |
@@ -112,6 +116,9 @@ python3 -m unittest discover -s tests -p 'test_*.py'   # no model needed, under 
 python3 tests/eval.py                                  # the real model, about 3 minutes; exits 1 on a failure
 python3 tests/eval.py close                            # only the cases whose name contains "close"
 ```
+
+The unit tests use a fixed set of programs, aliases, and apps (`setUpModule` in `test_safety.py`).
+They do not depend on what is installed on the machine.
 
 The eval records actions and does not do them, and it uses a temporary data folder. It replaces the
 two hand-off paths with recorders, so it does not call Claude Code.

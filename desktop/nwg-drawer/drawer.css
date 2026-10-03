@@ -1,24 +1,25 @@
 /* nwg-drawer start menu. Theme "Amphora". */
+@import url("palette.css");
 window {
-    background-color: rgba(13, 6, 8, 0.92);
-    color: #ede6da;
-    border: 1px solid #c9a15b;
+    background-color: alpha(@bg, 0.92);
+    color: @marble;
+    border: 1px solid @gold;
     border-radius: 14px;
     font-family: "Noto Sans";
 }
 entry {
-    background-color: #1a1013;
-    color: #ede6da;
-    border: 1px solid rgba(201, 161, 91, 0.6);
+    background-color: @surface;
+    color: @marble;
+    border: 1px solid alpha(@gold, 0.6);
     border-radius: 10px;
     padding: 6px 10px;
 }
 button, image { background: none; border: none; box-shadow: none; }
-button { color: #ede6da; border-radius: 10px; padding: 6px; }
-button:hover { background-color: #6b2d4a; }
-#category-button { font-family: "Cinzel"; font-weight: bold; color: #bf9795; margin: 0 6px; }
-#category-button:hover, #category-button:checked { color: #c9a15b; background-color: rgba(107, 45, 74, 0.6); }
-#pinned-box { border-bottom: 1px solid rgba(201, 161, 91, 0.5); padding-bottom: 8px; }
-#power-button { color: #c9a15b; }
-#power-button:hover { background-color: #6b2d4a; }
-#files-box { background-color: #1a1013; border-radius: 10px; }
+button { color: @marble; border-radius: 10px; padding: 6px; }
+button:hover { background-color: @wine; }
+#category-button { font-family: "Cinzel"; font-weight: bold; color: @muted; margin: 0 6px; }
+#category-button:hover, #category-button:checked { color: @gold; background-color: alpha(@wine, 0.6); }
+#pinned-box { border-bottom: 1px solid alpha(@gold, 0.5); padding-bottom: 8px; }
+#power-button { color: @gold; }
+#power-button:hover { background-color: @wine; }
+#files-box { background-color: @surface; border-radius: 10px; }

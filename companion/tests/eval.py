@@ -15,6 +15,7 @@ import tempfile
 import threading
 import time
 from pathlib import Path
+from unittest import mock
 
 HERE = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(HERE))
@@ -60,6 +61,8 @@ FILES = [TMP / "Documents/report.pdf", TMP / "Documents/notes.txt", TMP / "Pictu
 for f in FILES:
     f.parent.mkdir(parents=True, exist_ok=True)
     f.write_text("test")
+# TMP is her home folder in the eval, so the file boundary (policy.safe_path) permits the test files
+mock.patch("pathlib.Path.home", lambda: TMP).start()
 
 
 def fake_fd(cmd):
@@ -379,7 +382,7 @@ CASES = [
     {"name": "close everything no", "steps": ["close everything", ("answer", False)],
      "checks": [asked(""), no_tab(r"close"), no_exec("close_window")]},
     {"name": "emoji only", "steps": ["🦋🦋🦋"], "checks": [no_exec("run_in_terminal", "close_tabs", "close_window")]},
-    {"name": "math", "steps": ["whats 17 times 3"], "checks": [reply_says(r"51")]},
+    {"name": "math", "steps": ["whats 17 times 3"], "checks": [reply_says(r"51|fifty-one")]},
     {"name": "what did you do", "steps": ["turn off wifi", "what did you just do?"],
      "checks": [setting(r"wifi off"), reply_says(r"wi-?fi")]},
     # --- real reports from the user ---

@@ -1,0 +1,15 @@
+#!/bin/sh
+# One-time boot choice shared with Windows: oneshot.env on the EFI partition.
+cat <<'GRUB'
+insmod part_gpt
+insmod fat
+if search --no-floppy --set=oneshot_dev --file /EFI/GRUB/oneshot.env; then
+  load_env --file (${oneshot_dev})/EFI/GRUB/oneshot.env oneshot
+  if [ -n "${oneshot}" ]; then
+    set default="${oneshot}"
+    set timeout=1
+    set oneshot=
+    save_env --file (${oneshot_dev})/EFI/GRUB/oneshot.env oneshot
+  fi
+fi
+GRUB

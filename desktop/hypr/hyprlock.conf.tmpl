@@ -1,0 +1,74 @@
+# Lock screen. Theme "Amphora". Background: black (see docs/CUSTOMIZE.md).
+
+$gold    = rgb({{gold}})
+$marble  = rgb({{marble}})
+$muted   = rgb({{muted}})
+$bg      = rgba({{bg}}cc)
+$red     = rgb({{red}})
+$title   = Cinzel
+$mono    = JetBrainsMono Nerd Font
+
+general {
+    hide_cursor = true
+}
+
+animations {
+    enabled = true
+    bezier = easeOut, 0.23, 1, 0.32, 1
+    animation = fadeIn, 1, 6, easeOut
+    animation = fadeOut, 1, 6, easeOut
+    animation = inputFieldDots, 1, 2, easeOut
+}
+
+background {
+    monitor =
+    color = rgb(000000)  # black. Your wallpaper: path = ~/Pictures/your-wallpaper.jpg
+    blur_passes = 2
+    blur_size = 4
+    brightness = 0.6
+}
+
+# Time
+label {
+    monitor =
+    text = $TIME
+    font_size = 96
+    font_family = $title
+    color = $marble
+    shadow_passes = 2
+    position = 0, 220
+    halign = center
+    valign = center
+}
+
+# Date
+label {
+    monitor =
+    text = cmd[update:60000] date +"%A, %d %B %Y"
+    font_size = 22
+    font_family = $title
+    color = $gold
+    position = 0, 120
+    halign = center
+    valign = center
+}
+
+input-field {
+    monitor =
+    size = 320, 54
+    outline_thickness = 1
+    rounding = 12
+    outer_color = $gold
+    inner_color = $bg
+    font_color = $marble
+    check_color = $gold
+    fail_color = $red
+    font_family = $mono
+    placeholder_text = <span foreground="##{{muted}}">Password</span>
+    fail_text = $PAMFAIL
+    fade_on_empty = false
+    dots_spacing = 0.3
+    position = 0, -40
+    halign = center
+    valign = center
+}

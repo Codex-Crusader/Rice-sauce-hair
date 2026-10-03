@@ -1,20 +1,11 @@
--- Hyprland config. Theme "Amphora": colors from ~/dotfiles/theme/palette.sh.
+-- Hyprland config. Theme "Amphora".
 
 ------------------
 ---- COLORS ------
 ------------------
-local c = {
-    gold       = "c9a15b",
-    terracotta = "d66a2a",
-    aegean     = "303455",
-    wine       = "6b2d4a",
-    bg         = "0d0608",
-}
-
--- Return an rgba() string for Hyprland. alpha is a 2-digit hex string.
-local function rgba(hex, alpha)
-    return "rgba(" .. hex .. (alpha or "ff") .. ")"
-end
+-- palette.lua is made by bin/theme-build from theme/palette.sh: change colors there.
+local c = require("palette")
+local rgba = c.rgba
 
 ------------------
 ---- MONITORS ----
@@ -87,7 +78,7 @@ hl.config({
             enabled      = true,
             range        = 12,
             render_power = 3,
-            color        = 0xaa0d0608,
+            color        = rgba(c.bg, "aa"),
         },
 
         -- Soft blur behind translucent windows and the bar

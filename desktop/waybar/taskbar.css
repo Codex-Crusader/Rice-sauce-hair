@@ -1,14 +1,5 @@
-/* Taskbar. Theme "Amphora". Colors from ~/dotfiles/theme/palette.sh */
-@define-color bg      rgba(13, 6, 8, 0.80);
-@define-color surface #1a1013;
-@define-color overlay #2a1c20;
-@define-color marble  #ede6da;
-@define-color muted   #bf9795;
-@define-color gold    #c9a15b;
-@define-color aegean  #5b6fa8;
-@define-color wine    #6b2d4a;
-@define-color red     #c0503a;
-@define-color terracotta #d66a2a;
+/* Taskbar. Theme "Amphora": colors by name from palette.css (made by theme-build). */
+@import url("palette.css");
 
 * { min-height: 0; }
 
@@ -16,7 +7,7 @@
 window#waybar {
     font-family: "JetBrainsMono Nerd Font";
     font-size: 13px;
-    background: rgba(13, 6, 8, 0.62);
+    background: alpha(@bg, 0.62);
     color: @marble;
     border: 1px solid alpha(@gold, 0.55);
     border-radius: 14px;
@@ -56,7 +47,7 @@ window#waybar {
     padding: 0 9px;
     color: @marble;
 }
-#network, #bluetooth { color: @aegean; }
+#network, #bluetooth { color: @aegean_light; }
 #pulseaudio { color: @gold; }
 #battery.warning { color: @terracotta; }
 #battery.critical { color: @red; }

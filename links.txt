@@ -17,6 +17,7 @@ desktop/swaync              ~/.config/swaync
 desktop/rofi                ~/.config/rofi
 desktop/nwg-drawer          ~/.config/nwg-drawer
 system/systemd-user/*       ~/.config/systemd/user/
+system/environment.d/*     ~/.config/environment.d/
 
 # Apps
 apps/kitty                  ~/.config/kitty
@@ -26,8 +27,12 @@ apps/file-manager-actions   ~/.local/share/file-manager/actions
 
 # Theme
 theme/gtk/gtk-3.0.css       ~/.config/gtk-3.0/gtk.css
+theme/gtk/colors.css        ~/.config/gtk-3.0/colors.css
+theme/gtk/palette.css       ~/.config/gtk-3.0/palette.css
 theme/gtk/settings.ini      ~/.config/gtk-3.0/settings.ini
 theme/gtk/gtk-4.0.css       ~/.config/gtk-4.0/gtk.css
+theme/gtk/colors.css        ~/.config/gtk-4.0/colors.css
+theme/gtk/palette.css       ~/.config/gtk-4.0/palette.css
 theme/qt6ct/colors          ~/.config/qt6ct/colors
 theme/fonts/cinzel          ~/.local/share/fonts/cinzel
 
@@ -36,6 +41,7 @@ bin/health                  ~/.local/bin/health
 bin/sysupdate               ~/.local/bin/sysupdate
 bin/companion-switch        ~/.local/bin/companion-switch
 bin/link                    ~/.local/bin/link
+bin/theme-build             ~/.local/bin/theme-build
 
 # Desktop shortcut
 docs/RECOVERY.md            ~/Desktop/RECOVERY.md

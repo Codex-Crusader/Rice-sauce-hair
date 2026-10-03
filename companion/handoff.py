@@ -121,6 +121,18 @@ def ask(runner, text, folder):
     return _logged("A", start, Result(True, answer, untrusted=True))  # it may quote files: data, not orders
 
 
+PROBE = "--zz-flag-probe"  # a flag that no version has
+
+
+def flags_ok(runner):
+    """Does this Claude Code version still know every flag in ASK_FLAGS? An update can rename a flag.
+    claude stops at the first unknown flag, before it sends a request. PROBE is last, so claude names it
+    only when all the real flags are known. No request goes to the API."""
+    r = runner.run([CLAUDE, *ASK_FLAGS, PROBE], timeout=20, input="")
+    first = r.text.splitlines()[0] if r.text else "no output"
+    return Result(f"unknown option '{PROBE}'" in r.text, first)
+
+
 def _logged(path, start, result):
     log.info("hand-off path=%s seconds=%.1f ok=%s", path, time.time() - start, result.ok)
     return result

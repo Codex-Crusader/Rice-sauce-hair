@@ -1,0 +1,17 @@
+# After a GRUB package update, install the new GRUB to the EFI partition and remake grub.cfg.
+# Without this, the GRUB program on the EFI partition stays old while its modules in /boot/grub
+# are new, and a version mismatch can stop the boot.
+# --no-nvram: the firmware boot entries and the boot order are not changed (Boot0000 GRUB stays).
+# --removable: also update the fallback loader EFI/BOOT/BOOTX64.EFI (used if the entries are lost).
+# The name sorts before zz-snap-pac-post.hook, so the snapshot after the update includes this.
+[Trigger]
+Type = Package
+Operation = Install
+Operation = Upgrade
+Target = grub
+
+[Action]
+Description = Installing GRUB to the EFI partition and making grub.cfg...
+When = PostTransaction
+Depends = grub
+Exec = /usr/bin/sh -c 'grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=GRUB --no-nvram && grub-install --target=x86_64-efi --efi-directory=/boot/efi --removable --no-nvram && grub-mkconfig -o /boot/grub/grub.cfg'

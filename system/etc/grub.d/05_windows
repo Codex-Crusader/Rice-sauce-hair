@@ -1,0 +1,13 @@
+#!/bin/sh
+# Windows entry that restarts straight into Windows Boot Manager (EFI BootNext),
+# so GRUB is not in the Windows boot chain that BitLocker checks.
+num=$(efibootmgr | awk '$1 ~ /^Boot[0-9A-Fa-f]+\*?$/ && $2 == "Windows" && $3 == "Boot" && $4 == "Manager" { print substr($1, 5, 4); exit }')
+[ -n "$num" ] || { echo "05_windows: no Windows Boot Manager entry found" >&2; exit 0; }
+cat <<GRUB
+menuentry 'Windows' --class windows --class os --id windows {
+    insmod efibootnext
+    if bootnext $num; then
+        reboot
+    fi
+}
+GRUB

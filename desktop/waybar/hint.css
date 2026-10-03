@@ -1,10 +1,11 @@
 /* Hint strip. Theme "Amphora". No panel: text with a shadow, so the wallpaper shows. */
+@import url("palette.css");
 * { min-height: 0; }
 window#waybar {
     font-family: "JetBrainsMono Nerd Font";
     font-size: 11px;
     background: transparent;
-    color: #e3c9a0;
+    color: @parchment;
     text-shadow: 0 1px 3px rgba(0, 0, 0, 0.95), 0 0 6px rgba(0, 0, 0, 0.8);
 }
 #custom-hints { padding: 0 12px; }

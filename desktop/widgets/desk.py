@@ -38,7 +38,17 @@ def user_name():
 
 
 USER = user_name()
-GOLD, LAVENDER, MARBLE, WINE = (0.79, 0.63, 0.36), (0.78, 0.66, 0.92), (0.93, 0.90, 0.85), (0.42, 0.18, 0.29)
+
+
+def read_palette():
+    """{name: (r, g, b)} with values 0 to 1, from theme/palette.sh (the one source of theme colors)."""
+    text = (HERE.parents[1] / "theme/palette.sh").read_text()
+    return {name.lower(): tuple(int(value[i:i + 2], 16) / 255 for i in (0, 2, 4))
+            for name, value in re.findall(r"^([A-Z_]+)=([0-9A-Fa-f]{6})\b", text, re.M)}
+
+
+PALETTE = read_palette()
+GOLD, LAVENDER, MARBLE, RED = PALETTE["gold"], PALETTE["lavender"], PALETTE["marble"], PALETTE["red"]
 E = Layer.Edge
 
 
@@ -102,12 +112,44 @@ class Clock:
 
 # ---------- system rings ----------
 
-def nvidia_state():
-    """'awake' or 'asleep' from the PCI power state. nvidia-smi would wake the GPU, so do not call it."""
+# Only sysfs files here: nvidia-smi and lspci can wake a sleeping GPU, so do not call them.
+
+def find_nvidia():
+    """The sysfs folder of the NVIDIA GPU, or None. Searched one time, at start."""
     for dev in Path("/sys/bus/pci/devices").iterdir():
         if read(dev / "vendor") == "0x10de" and read(dev / "class").startswith("0x03"):
-            return "awake" if read(dev / "power/runtime_status") == "active" else "asleep"
-    return "missing"
+            return dev
+    return None
+
+
+def gpu_name(dev, ids=Path("/usr/share/hwdata/pci.ids")):
+    """A short name from the PCI ID database: "AD107M [GeForce RTX 4060 Max-Q / Mobile]" -> "RTX 4060"."""
+    device = read(dev / "device").removeprefix("0x")
+    in_nvidia = False
+    try:
+        with ids.open(errors="ignore") as f:
+            for line in f:
+                if line.startswith("#") or not line.strip():  # comments are also inside a vendor section
+                    continue
+                if not line.startswith("\t"):
+                    in_nvidia = line.startswith("10de ")
+                elif in_nvidia and line.startswith(f"\t{device} "):
+                    m = re.search(r"\b((?:RTX|GTX|MX|RTX A)\s?\d+\w*(?: Ti| SUPER)?)", line)
+                    return m.group(1) if m else line.split(None, 1)[1].strip()
+    except OSError:
+        pass
+    return "NVIDIA GPU"
+
+
+NVIDIA = find_nvidia()
+GPU_NAME = gpu_name(NVIDIA) if NVIDIA else "NVIDIA GPU"
+
+
+def nvidia_state():
+    """'awake' or 'asleep' from the PCI runtime power state."""
+    if not NVIDIA:
+        return "missing"
+    return "awake" if read(NVIDIA / "power/runtime_status") == "active" else "asleep"
 
 
 def cpu_temp():
@@ -160,7 +202,7 @@ class Rings:
         cpu = self.cpu()
         self.values = [cpu, ram, disk, min(temp / 100, 1), level / 100]
         self.texts = [f"{cpu:.0%}", f"{ram:.0%}", f"{disk:.0%}", f"{temp:.0f}°", f"{level}%{'+' if charging else ''}"]
-        self.gpu.set_text(f"RTX 4060  ·  {nvidia_state()}      {int(mem['MemAvailable']) / 1048576:.1f} GiB free")
+        self.gpu.set_text(f"{GPU_NAME}  ·  {nvidia_state()}      {int(mem['MemAvailable']) / 1048576:.1f} GiB free")
         self.area.queue_draw()
         return True
 
@@ -175,7 +217,7 @@ class Rings:
             cr.set_source_rgba(*MARBLE, 0.12)
             cr.arc(cx, cy, r, 0, 2 * math.pi)
             cr.stroke()
-            cr.set_source_rgba(*((0.75, 0.31, 0.23) if warn else GOLD), 0.95)
+            cr.set_source_rgba(*(RED if warn else GOLD), 0.95)
             cr.new_sub_path()
             cr.arc(cx, cy, r, -math.pi / 2, -math.pi / 2 + 2 * math.pi * max(value, 0.01))
             cr.stroke()
