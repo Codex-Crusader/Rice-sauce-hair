@@ -11,6 +11,7 @@ local call = function(fn, ...) local args = { ... } return function() fn(unpack(
 local terminal = "kitty"
 local files    = "pcmanfm-qt"
 local browser  = "flatpak run com.google.Chrome"
+local repair   = "systemctl --user restart hypr-desktop.target && notify-send -a Desktop 'Desktop parts restarted'"
 
 -- { keys, action, description, options }
 local keymap = {
@@ -52,7 +53,7 @@ local keymap = {
     { "SUPER + H",            exec(BIN .. "toggle-hints"),       "Hide or show this hint strip" },
     { "SUPER + F1",           exec(BIN .. "cheatsheet"),         "Cheat sheet (all keys)",  { hint = true } },
     { "SUPER + X",            exec(BIN .. "power-menu"),         "Power menu" },
-    { "SUPER + SHIFT + R",    exec("systemctl --user restart hypr-desktop.target && notify-send -a Desktop 'Desktop parts restarted'"), "Repair: restart bars, notifications, Companion" },
+    { "SUPER + SHIFT + R",    exec(repair),                      "Repair: restart bars, notifications, Companion" },
     { "SUPER + SHIFT + M",    exec(BIN .. "power-menu"),         "Power menu (log out asks first)" },
 
     -- Scratchpad

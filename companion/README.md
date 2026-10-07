@@ -55,6 +55,10 @@ Learned words count before the built-in aliases.
   (`safe_path` in `policy.py`). The path must be in the home folder after symlinks are followed, and not
   in a deny folder. `open_file` also refuses scripts, `.desktop` files, and executable files, because
   opening them would run a program.
+- **Virus scan**: `virus_scan` moves each file that ClamAV finds to `~/.local/share/companion/quarantine`,
+  read only, with a record of where it was. It never deletes. It does not move links, or files in a deny
+  folder or outside the home folder. `restore_from_quarantine` and `empty_quarantine` ask first.
+  Each scan result is in `~/.local/share/companion/virus-scans.log`. `health` warns while the quarantine has files.
 
 ## Hand-off to Claude Code
 

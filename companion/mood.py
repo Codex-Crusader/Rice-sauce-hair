@@ -9,9 +9,9 @@ import time
 
 FADE_SECONDS = 2 * 3600
 
-WARM = re.compile(r"\b(thank|thanks|thx|love|cute|good job|well done|great|awesome|nice|sweet|kind(?! of))\b|❤|🥰|😊|🦋", re.I)
-HARSH = re.compile(r"\b(stupid|useless|dumb|shut up|idiot|hate you)\b", re.I)
-PLAYFUL = re.compile(r"\b(haha|lol|lmao|tease|joke|silly)\b|😂|😜|😏", re.I)
+WARM = re.compile(r"\b(thank|thanks|thx|love|cute|good job|well done|great|awesome|nice|sweet|kind(?! of))\b|❤|🥰|😊|🦋", re.IGNORECASE)
+HARSH = re.compile(r"\b(stupid|useless|dumb|shut up|idiot|hate you)\b", re.IGNORECASE)
+PLAYFUL = re.compile(r"\b(haha|lol|lmao|tease|joke|silly)\b|😂|😜|😏", re.IGNORECASE)
 
 # How each mood colors her words. One line each, so the prompt stays short. {user} is the user's name.
 # persona.toml can replace any line in a [moods] table.
@@ -71,7 +71,7 @@ class Mood:
         """Problems found by a tool worry her; a fix makes her cheerful again."""
         text = str(result)
         # whole words at the start of a line or after a colon, so a file named error.log does not count
-        if re.search(r"(^|:\s*)(WARN|FAIL|failed|error)\b|\bFOUND$", text, re.M) and "no errors" not in text:
+        if re.search(r"(^|:\s*)(WARN|FAIL|failed|error)\b|\bFOUND$", text, re.MULTILINE) and "no errors" not in text:
             self.set("worried", "you just found a problem on the system")
 
     # ----- what she reads -----

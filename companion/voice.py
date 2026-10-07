@@ -8,11 +8,11 @@ import time
 import llm
 
 EXPRESSIONS = ("idle", "happy", "thinking", "worried")
-TAG = re.compile(r"^\s*\[_?([\w-]+?)[_-]?\]\s*", re.I)  # any [word] at the start; unknown ones show as idle
+TAG = re.compile(r"^\s*\[_?([\w-]+?)[_-]?\]\s*", re.IGNORECASE)  # any [word] at the start; unknown ones show as idle
 # Stock assistant sentences that a small model adds out of habit. They are not her voice.
 CLICHES = re.compile(r"[^.!?]*\b(let me know if (you|there'?s|i can)\b|((would|do) you )?(like|want|need) (me )?(to do |help with )?(anything|something) else|is there anything else|anything else i can help|"
-                     r"i(?:'m| am) (just )?here to help|how can i (assist|help) you|feel free to ask)[^.!?]*[.!?]?\s*", re.I)
-STAGE = re.compile(r"\*[^*\n]{1,120}\*|\((?:she |softly|gently|smiles|sighs|laughs)[^)\n]{0,80}\)", re.I)
+                     r"i(?:'m| am) (just )?here to help|how can i (assist|help) you|feel free to ask)[^.!?]*[.!?]?\s*", re.IGNORECASE)
+STAGE = re.compile(r"\*[^*\n]{1,120}\*|\((?:she |softly|gently|smiles|sighs|laughs)[^)\n]{0,80}\)", re.IGNORECASE)
 VOICE_RULES = ("Write only the words you say aloud: no narration, no stage directions, no asterisks, "
                "no quotation marks around your words.")
 
@@ -34,7 +34,7 @@ def speak(config, mood, facts, history, note, options=None):
 
 def unquote_narration(text, name):
     """'Companion smiles. "Hello."' -> 'Hello.' A narrated reply keeps only the quoted words."""
-    if re.match(rf"^\s*{re.escape(name)}\b", text) or re.match(r"^\s*(she|her)\b", text, re.I):
+    if re.match(rf"^\s*{re.escape(name)}\b", text) or re.match(r"^\s*(she|her)\b", text, re.IGNORECASE):
         quoted = re.findall(r"[\"“]([^\"”]+)[\"”]", text)
         if quoted:
             return " ".join(q.strip() for q in quoted)
@@ -43,7 +43,7 @@ def unquote_narration(text, name):
 
 def clean(text, name="Companion"):
     """Returns (expression, text): the [tag] becomes the expression; narration and stock phrases go."""
-    text = re.sub(r"<think>.*?</think>", "", text or "", flags=re.S).strip()
+    text = re.sub(r"<think>.*?</think>", "", text or "", flags=re.DOTALL).strip()
     m = TAG.match(text)
     expression = m.group(1).lower() if m else "idle"
     if expression not in EXPRESSIONS or expression == "thinking":  # the thinking face is for while she works

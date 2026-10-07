@@ -3,7 +3,6 @@ import re
 
 from runner import Result
 
-
 # ---------- memory ----------
 
 MEMORY_LIMIT = 50

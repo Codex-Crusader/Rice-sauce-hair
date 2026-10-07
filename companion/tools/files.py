@@ -8,7 +8,6 @@ from policy import PathRefused, safe_path, safe_to_open
 from runner import Result
 from tools.common import spawn
 
-
 # ---------- files ----------
 
 SHOWN = 20          # rows in the answer

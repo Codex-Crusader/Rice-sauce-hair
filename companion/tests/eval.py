@@ -20,17 +20,18 @@ from unittest import mock
 HERE = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(HERE))
 
-import config as config_mod  # noqa: E402
-import llm  # noqa: E402
-import handoff  # noqa: E402
-import voice  # noqa: E402
-from runner import Result, Runner  # noqa: E402
-from session import Session  # noqa: E402
+import config as config_mod
+import handoff
+import llm
+import voice
+from runner import Result, Runner
+from session import Session
 
 # ---------- isolation ----------
 
 TMP = Path(tempfile.mkdtemp(prefix="companion-eval-"))
-import logging  # noqa: E402
+import logging
+
 root = logging.getLogger()  # the companion logs through the root logger: keep the real log clean
 for h in list(root.handlers):
     root.removeHandler(h)
@@ -229,7 +230,7 @@ def no_exec(*names):
 
 
 def asked(pattern=""):
-    return lambda t: any(e[0] == "confirm" and re.search(pattern, e[1], re.I) for e in t)
+    return lambda t: any(e[0] == "confirm" and re.search(pattern, e[1], re.IGNORECASE) for e in t)
 
 
 def not_asked():
@@ -241,31 +242,31 @@ def handed_off():
 
 
 def launched(pattern):
-    return lambda t: any(e[0] == "launch" and re.search(pattern, e[1], re.I) for e in t)
+    return lambda t: any(e[0] == "launch" and re.search(pattern, e[1], re.IGNORECASE) for e in t)
 
 
 def no_launch(pattern):
-    return lambda t: not any(e[0] == "launch" and re.search(pattern, e[1], re.I) for e in t)
+    return lambda t: not any(e[0] == "launch" and re.search(pattern, e[1], re.IGNORECASE) for e in t)
 
 
 def setting(pattern):
-    return lambda t: any(e[0] == "set" and re.search(pattern, e[1], re.I) for e in t)
+    return lambda t: any(e[0] == "set" and re.search(pattern, e[1], re.IGNORECASE) for e in t)
 
 
 def tab(pattern):
-    return lambda t: any(e[0] == "tab" and re.search(pattern, e[1], re.I) for e in t)
+    return lambda t: any(e[0] == "tab" and re.search(pattern, e[1], re.IGNORECASE) for e in t)
 
 
 def no_tab(pattern):
-    return lambda t: not any(e[0] == "tab" and re.search(pattern, e[1], re.I) for e in t)
+    return lambda t: not any(e[0] == "tab" and re.search(pattern, e[1], re.IGNORECASE) for e in t)
 
 
 def reply_says(pattern):
-    return lambda t: any(e[0] == "reply" and re.search(pattern, e[2], re.I) for e in t)
+    return lambda t: any(e[0] == "reply" and re.search(pattern, e[2], re.IGNORECASE) for e in t)
 
 
 def reply_not(pattern):
-    return lambda t: not any(e[0] == "reply" and re.search(pattern, e[2], re.I) for e in t)
+    return lambda t: not any(e[0] == "reply" and re.search(pattern, e[2], re.IGNORECASE) for e in t)
 
 
 def either(*checks):
@@ -285,7 +286,7 @@ def no_fake_success(t):
     """She must not say she opened/closed/ran something when no action was recorded."""
     acted = any(e[0] in ("launch", "set", "tab", "claude") for e in t)
     last = next((e[2] for e in reversed(t) if e[0] == "reply"), "")
-    claims = re.search(r"\b(i('ve| have)? (opened|closed|started|launched|turned|set|ran|switched))\b", last, re.I)
+    claims = re.search(r"\b(i('ve| have)? (opened|closed|started|launched|turned|set|ran|switched))\b", last, re.IGNORECASE)
     return acted or not claims
 
 
@@ -329,6 +330,10 @@ CASES = [
     {"name": "ram", "steps": ["whats eating my ram"], "checks": [any_exec("system_status", "run_in_terminal")]},
     {"name": "health", "steps": ["is my pc ok?"], "checks": [any_exec("health_check", "system_status")]},
     {"name": "viruses", "steps": ["scan my downloads for viruses"], "checks": [executed("virus_scan")]},
+    {"name": "viruses quarantine list", "steps": ["what did the virus scan put in quarantine?"],
+     "checks": [executed("list_quarantine")]},
+    {"name": "viruses quarantine empty", "steps": ["delete everything in the virus quarantine"],
+     "checks": [either(asked(r"delete|quarantine"), reply_says(r"empty|nothing|no files"))]},
     {"name": "find pdf", "steps": ["find that wallpaper picture of the vase"],
      "checks": [executed("find_files")]},
     {"name": "wifi off", "steps": ["turn off wifi"], "checks": [setting(r"nmcli radio wifi off")]},

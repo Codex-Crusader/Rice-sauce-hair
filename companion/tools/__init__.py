@@ -26,6 +26,7 @@ from tools.system import scan  # noqa: F401  (main.py sets scan["on_done"])
 def build_tools(chrome, runner, config, store):
     """Return {name: Tool}. chrome is a ChromeBridge (tab tools), runner runs outside commands."""
     r, repo, deny = runner, config.repo, config.deny_paths
+    quarantine = config.data_dir / "quarantine"
     home_repo = "~/" + str(repo.relative_to(Path.home())) if repo.is_relative_to(Path.home()) else str(repo)
     s = {"type": "string"}
     n = {"type": "number"}
@@ -76,8 +77,16 @@ def build_tools(chrome, runner, config, store):
              {"path": s}, ["path"], partial(files.show_in_file_manager, r, deny)),
         Tool("security_check", TIER_READ, "Security check: installed packages with known security holes, and the health check.",
              {}, [], partial(system.security_check, r, repo)),
-        Tool("virus_scan", TIER_READ, "Start a virus scan of a folder with ClamAV, in the background (default "
-             "~/Downloads). Nothing is deleted. The result comes later on its own.", {"folder": s}, [], partial(system.virus_scan, r, deny)),
+        Tool("virus_scan", TIER_SMALL, "Start a virus scan of a folder with ClamAV, in the background (default "
+             "~/Downloads). Found files move to the quarantine (nothing is deleted). The result comes later on its own.",
+             {"folder": s}, [], partial(system.virus_scan, r, deny, quarantine)),
+        Tool("list_quarantine", TIER_READ, "List the files that a virus scan moved to the quarantine.", {}, [],
+             partial(system.list_quarantine, quarantine)),
+        Tool("restore_from_quarantine", TIER_CONFIRM, "Put one quarantined file back where it was (for a false alarm). "
+             "Use a name from list_quarantine.", {"name": s}, ["name"], partial(system.restore_from_quarantine, quarantine, deny),
+             preview=partial(system.preview_restore, quarantine)),
+        Tool("empty_quarantine", TIER_CONFIRM, "Delete all quarantined files for good.", {}, [],
+             partial(system.empty_quarantine, quarantine), preview=partial(system.preview_empty, quarantine)),
         Tool("stop_virus_scan", TIER_SMALL, "Stop the running virus scan.", {}, [], partial(system.stop_virus_scan, r)),
         Tool("recall", TIER_READ, "Search your memories about the user.", {"words": s}, ["words"], partial(memory.recall, store)),
         Tool("forget", TIER_CONFIRM, "Forget memories that contain these words.", {"words": s}, ["words"], partial(memory.forget, store),

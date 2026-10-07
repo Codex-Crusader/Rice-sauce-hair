@@ -5,7 +5,6 @@ from pathlib import Path
 from runner import Result
 from tools.common import spawn
 
-
 # ---------- apps and links ----------
 
 APP_DIRS = [Path.home() / ".local/share/applications", Path("/usr/share/applications"),

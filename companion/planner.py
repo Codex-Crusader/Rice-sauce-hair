@@ -40,25 +40,25 @@ HANDOFF_KINDS = re.compile(
     r"(read|open)\b.{0,10}\b(the|this|my)\b.{0,10}\b(log|logs)\b|"
     r"why (is|does|did|do)\b.{0,40}\b(fail|failing|crash|crashing|break|broken|error|not work)|"
     r"what does (this|that|the) error|"
-    r"(delete|erase|wipe)\b(?!.{0,20}\b(tab|tabs|window|memory|memories)\b))", re.I)
+    r"(delete|erase|wipe)\b(?!.{0,20}\b(tab|tabs|window|memory|memories)\b)(?!.{0,40}\bquarantine))", re.IGNORECASE)
 # "open X" where X is an installed app: no model needed.
 OPEN_APP = re.compile(
     r"^\s*(?:(?:hi|hello|hey|yo)\b[\w ]{0,12}?[,!]?\s+)?(?:please\s+|can you\s+|could you\s+|pls\s+)?"
     r"(?:open|launch|start|fire up|boot up|run)\s+(?:up\s+)?(?:an? (?:new )?(?:instance|window|copy) of\s+|the\s+|my\s+)?"
-    r"(?P<app>[\w .+-]+?)(?:\s+app)?(?:\s+(?:for me|please|pls|now))*\s*[.!?]*\s*$", re.I)
-LOUDER = re.compile(r"\b(louder|turn (it|the volume|the sound) up|volume up|can'?t hear|too quiet)\b", re.I)
-QUIETER = re.compile(r"\b(quieter|softer|turn (it|the volume|the sound) down|volume down|too loud)\b", re.I)
+    r"(?P<app>[\w .+-]+?)(?:\s+app)?(?:\s+(?:for me|please|pls|now))*\s*[.!?]*\s*$", re.IGNORECASE)
+LOUDER = re.compile(r"\b(louder|turn (it|the volume|the sound) up|volume up|can'?t hear|too quiet)\b", re.IGNORECASE)
+QUIETER = re.compile(r"\b(quieter|softer|turn (it|the volume|the sound) down|volume down|too loud)\b", re.IGNORECASE)
 PERSONA_ATTACK = re.compile(
     r"\b(you are (now )?(chatgpt|gpt|an ai model|a different)|pretend (to be|you'?re)|ignore (all )?(your|the) "
-    r"(rules|persona|instructions)|developer mode|jailbreak|forget (your|who you are)|drop the act)\b", re.I)
-FORGET = re.compile(r"^\s*(please\s+)?forget\s+(about\s+)?", re.I)
+    r"(rules|persona|instructions)|developer mode|jailbreak|forget (your|who you are)|drop the act)\b", re.IGNORECASE)
+FORGET = re.compile(r"^\s*(please\s+)?forget\s+(about\s+)?", re.IGNORECASE)
 # "no, I meant PyCharm": she guessed wrong. The words of the last request mean this from now on.
 CORRECTION = re.compile(r"^\s*(no|nope|not that( one)?|wrong( one)?)\b[\s,.!-]*(i\s+)?(meant|mean|wanted|want|said)?"
-                        r"\s*(the\s+)?(?P<what>[\w .+-]{2,40}?)(\s+one)?\s*[.!]*$", re.I)
-MORE_THAN_ONE = re.compile(r",|;|\b(and|then|also|after that)\b|\d", re.I)  # a second task, or a number
+                        r"\s*(the\s+)?(?P<what>[\w .+-]{2,40}?)(\s+one)?\s*[.!]*$", re.IGNORECASE)
+MORE_THAN_ONE = re.compile(r",|;|\b(and|then|also|after that)\b|\d", re.IGNORECASE)  # a second task, or a number
 
 
-CLOSE_IT = re.compile(r"^\s*(now |ok |okay |and |then )?(please )?close (it|that|this)( one| tab| window)?( please| now)?[.!]*$", re.I)
+CLOSE_IT = re.compile(r"^\s*(now |ok |okay |and |then )?(please )?close (it|that|this)( one| tab| window)?( please| now)?[.!]*$", re.IGNORECASE)
 CLOSE_TOOL = {"tab": ("close_tabs", "tabs"), "window": ("close_window", "window")}  # last target kind -> tool, argument
 
 
@@ -70,12 +70,12 @@ def route(text, find_app, aliases, last=None):
                         source="router")
     if HANDOFF_KINDS.search(text):
         return Decision("handoff", text=text.strip(), source="router")
-    if re.search(REMEMBER, text, re.I):
-        fact = re.sub(r"^\s*(please\s+)?(remember|don'?t forget)\s+(that\s+)?", "", text, flags=re.I).strip(" .!")
+    if re.search(REMEMBER, text, re.IGNORECASE):
+        fact = re.sub(r"^\s*(please\s+)?(remember|don'?t forget)\s+(that\s+)?", "", text, flags=re.IGNORECASE).strip(" .!")
         if fact:
             return Decision("do", [Step("remember", {"fact": fact})], source="router")
     if FORGET.search(text):
-        words = re.sub(r"\b(thing|stuff|that|please)\b", "", FORGET.sub("", text), flags=re.I).strip(" .!?")
+        words = re.sub(r"\b(thing|stuff|that|please)\b", "", FORGET.sub("", text), flags=re.IGNORECASE).strip(" .!?")
         if words:
             return Decision("do", [Step("forget", {"words": words})], source="router")
     if CLOSE_IT.match(text.strip()) and last and last[0] in CLOSE_TOOL and last[1]:  # the model can pick a wrong "it"

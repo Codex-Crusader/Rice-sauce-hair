@@ -84,11 +84,21 @@ done < <(find "$REPO/system/etc" \( -type f -o -type l \) -print0)
 [ ${#drift[@]} -eq 0 ] && ok "system/etc matches /etc" \
     || warn "system/etc and /etc differ: ${drift[*]} (compare, then copy the correct side)"
 
-# Virus signatures older than 3 days: the daily update stopped
-sig=$(stat -c %Y /var/lib/clamav/daily.cvd /var/lib/clamav/daily.cld 2>/dev/null | sort -n | tail -1)
-if [ -n "$sig" ]; then
-    days=$(( ($(date +%s) - sig) / 86400 ))
-    [ "$days" -le 3 ] && ok "virus signatures ${days} days old" || warn "virus signatures are ${days} days old"
+# ClamAV: the daily signature update must be on, and the signatures at most 3 days old
+if has clamav; then
+    systemctl -q is-enabled clamav-freshclam-once.timer 2>/dev/null && ok "virus signature update timer on" \
+        || warn "virus signature update timer off (run: sudo systemctl enable --now clamav-freshclam-once.timer)"
+    sig=$(stat -c %Y /var/lib/clamav/daily.cvd /var/lib/clamav/daily.cld 2>/dev/null | sort -n | tail -1)
+    if [ -z "$sig" ]; then
+        warn "no virus signatures (run: sudo freshclam)"
+    else
+        days=$(( ($(date +%s) - sig) / 86400 ))
+        [ "$days" -le 3 ] && ok "virus signatures ${days} days old" || warn "virus signatures are ${days} days old"
+    fi
+    # Files that Companion's virus scan moved away (records.json is the list, not a file)
+    q=$(find ~/.local/share/companion/quarantine -type f ! -name records.json 2>/dev/null | wc -l)
+    [ "$q" -eq 0 ] && ok "virus quarantine empty" \
+        || warn "$q file(s) in the virus quarantine (ask Companion to list them, then restore or delete)"
 fi
 
 if [ "$1" = "--notify" ] && [ ${#problems[@]} -gt 0 ]; then

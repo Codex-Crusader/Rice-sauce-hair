@@ -16,8 +16,8 @@ from tools.files import KINDS, SCAN_LIMIT, newest, short
 
 LIMIT = 5
 # "open kitty" means a new one; "bring up kitty" means the open window
-OPEN_NEW = re.compile(r"\b(open|start|launch|run|fire up|boot up|kholo|khol do|chalao|chala do)\b", re.I)
-BRING_UP = re.compile(r"\b(bring up|show me|switch to|go to|back to|focus|pull up)\b", re.I)
+OPEN_NEW = re.compile(r"\b(open|start|launch|run|fire up|boot up|kholo|khol do|chalao|chala do)\b", re.IGNORECASE)
+BRING_UP = re.compile(r"\b(bring up|show me|switch to|go to|back to|focus|pull up)\b", re.IGNORECASE)
 STOP = {"the", "a", "an", "my", "me", "i", "it", "that", "this", "thing", "stuff", "one", "up", "please", "pls",
         "can", "could", "you", "open", "bring", "show", "start", "launch", "switch", "go", "to", "back", "focus",
         "run", "find", "get", "put", "on", "from", "for", "of", "and", "with", "app", "window", "tab", "some",
@@ -34,7 +34,7 @@ CATEGORY_WORDS = {
     "settings": {"Settings"}, "monitor": {"Monitor"}, "tasks": {"Monitor"},
 }
 FILE_WORDS = re.compile(r"\b(pdf|file|files|document|doc|docx|picture|pictures|photo|image|screenshot|video|"
-                        r"song|download|downloaded|spreadsheet|slides|presentation)\b", re.I)
+                        r"song|download|downloaded|spreadsheet|slides|presentation)\b", re.IGNORECASE)
 FILE_KINDS = [(r"\bpdf\b", ["pdf"]), (r"\b(picture|photo|image|screenshot)s?\b", KINDS["image"]),
               (r"\bvideos?\b", KINDS["video"]), (r"\bsongs?\b", KINDS["audio"]),
               (r"\b(document|doc|docx)s?\b", KINDS["document"]),
@@ -107,8 +107,8 @@ def find(request, snap, runner, learned=None, home=None):
 
 def files(request, words, runner, home):
     """Recent files that fit the request: fd, by kind and age, newest first."""
-    exts = next((e for pattern, e in FILE_KINDS if re.search(pattern, request, re.I)), [])
-    age = next((a for pattern, a in FILE_TIMES if re.search(pattern, request, re.I)), "")
+    exts = next((e for pattern, e in FILE_KINDS if re.search(pattern, request, re.IGNORECASE)), [])
+    age = next((a for pattern, a in FILE_TIMES if re.search(pattern, request, re.IGNORECASE)), "")
     names = [w for w in words if not FILE_WORDS.search(w) and not any(re.search(p, w) for p, _ in FILE_TIMES)]
     cmd = ["fd", "--type", "f", "--ignore-case", "--absolute-path", "--exclude", ".cache", "--exclude", ".local/share",
            "--max-results", str(SCAN_LIMIT), *[a for e in exts for a in ("--extension", e)]]

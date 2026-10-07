@@ -28,8 +28,8 @@ class Verdict:
 # ---------- the user's own words ----------
 
 REMEMBER = r"^\s*(please\s+)?remember\b|\bdon'?t forget\b"
-TALK_TO_CLAUDE = re.compile(r"\bclaude\b.*\b(tell|ask|send|say|type|write)\b|\b(tell|ask|send|say|type|write)\b.*\bclaude\b", re.I)
-SEND_IT = re.compile(r"^\s*(now\s+)?(send|tell|say|type|ask)\b", re.I)
+TALK_TO_CLAUDE = re.compile(r"\bclaude\b.*\b(tell|ask|send|say|type|write)\b|\b(tell|ask|send|say|type|write)\b.*\bclaude\b", re.IGNORECASE)
+SEND_IT = re.compile(r"^\s*(now\s+)?(send|tell|say|type|ask)\b", re.IGNORECASE)
 # Tools that run at once only when the user's own message asked for them; otherwise she asks first.
 # A web page title could otherwise make her save a "fact" or type into Claude Code.
 ASK_UNLESS_REQUESTED = {"remember", "tell_claude"}
@@ -44,7 +44,7 @@ def words_in(message, text):
 
 def user_asked(name, args, user_text):
     if name == "remember":
-        return bool(re.search(REMEMBER, user_text, re.I))
+        return bool(re.search(REMEMBER, user_text, re.IGNORECASE))
     if name == "tell_claude":
         return bool(TALK_TO_CLAUDE.search(user_text) or SEND_IT.search(user_text)) and \
             words_in(str(args.get("message", "")), user_text)
@@ -63,7 +63,7 @@ SAFE_SUBCOMMANDS = {"git": {"status", "log", "diff", "show", "branch"},
 SHELL_SYNTAX = re.compile(r"[;&|<>`$(){}\\\n]")
 # Arguments that make a read-only program write files or run other programs (rg --pre, git log --output)
 UNSAFE_ARGS = re.compile(r"^--?(vacuum|rotate|flush|setup-keys|relinquish|exec|delete|output|pre\b|pager|"
-                         r"ext-diff|gen-config|config|compile)", re.I)
+                         r"ext-diff|gen-config|config|compile)", re.IGNORECASE)
 ROOT_PROGRAMS = {"sudo", "su", "doas", "pkexec", "run0"}
 # Commands that would destroy the system or the home folder: never run, never even ask.
 CATASTROPHIC = re.compile(
@@ -119,7 +119,7 @@ def shell_aliases():
         names = set()
         for f in files:
             try:
-                names.update(re.findall(r"^\s*alias\s+([\w-]+)=", f.read_text(), re.M))
+                names.update(re.findall(r"^\s*alias\s+([\w-]+)=", f.read_text(), re.MULTILINE))
             except OSError:
                 pass
         _aliases.update(key=key, names=frozenset(names))

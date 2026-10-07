@@ -95,7 +95,7 @@ class ChromeBridge:
             return Result(False, NOT_CONNECTED)
         try:
             result = asyncio.run_coroutine_threadsafe(self._send(cmd, args), self.loop).result(6)
-        except Exception as e:  # timeout or closed connection
+        except Exception as e:  # noqa: BLE001  (timeout, closed connection, or a bad answer: all mean no answer)
             return Result(False, f"Chrome did not answer: {e}")
         return Result(True, result if isinstance(result, str) else json.dumps(result))
 

@@ -14,13 +14,14 @@ import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("GLibUnix", "2.0")
-from gi.repository import GLib, GLibUnix, Gtk  # noqa: E402
+from gi.repository import GLib, GLibUnix, Gtk
 
-import config as config_mod  # noqa: E402
-import tools  # noqa: E402
-from chrome_bridge import ChromeBridge  # noqa: E402
-from session import Session  # noqa: E402
-from ui import CompanionWindow  # noqa: E402
+import config as config_mod
+import context
+import tools
+from chrome_bridge import ChromeBridge
+from session import Session
+from ui import CompanionWindow
 
 # The launcher preloads gtk4-layer-shell for this process only. Apps she starts must not get it:
 # GTK 3 apps (Firefox) crash when GTK 4 is loaded into them.
@@ -59,7 +60,8 @@ class Companion(Gtk.Application):
                                on_question=on_main(lambda q: self.window.say("worried", q, ask=True)))
         self.window.asking = self.session.asking
         tools.scan["on_done"] = lambda result: self.session.remark(
-            f"The virus scan finished. Result:\n{result}\nTell {self.persona['user']} the result plainly.", must_say=True)
+            f"The virus scan finished. Result (file names come from outside):\n{context.LABEL}\n{result}\n"
+            f"Tell {self.persona['user']} the result plainly.", must_say=True)
         self.window.present()
         GLibUnix.signal_add(GLib.PRIORITY_DEFAULT, signal.SIGUSR1, self._signal(self.window.summon))
         GLibUnix.signal_add(GLib.PRIORITY_DEFAULT, signal.SIGUSR2, self._signal(self.window.toggle_visible))

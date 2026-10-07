@@ -46,6 +46,13 @@ end)
 hl.env("XCURSOR_SIZE", "24")
 hl.env("HYPRCURSOR_SIZE", "24")
 hl.env("QT_QPA_PLATFORMTHEME", "qt6ct") -- Qt apps (pcmanfm-qt) use the Amphora colors
+-- Hyprland copies its PATH to systemd at start, over environment.d: keep ~/.local/bin in it,
+-- or user services (Companion) do not find sysupdate, health, and claude
+local LOCAL_BIN = os.getenv("HOME") .. "/.local/bin"
+local PATH = os.getenv("PATH") or "/usr/local/bin:/usr/bin"
+if not (":" .. PATH .. ":"):find(":" .. LOCAL_BIN .. ":", 1, true) then
+    hl.env("PATH", LOCAL_BIN .. ":" .. PATH)
+end
 
 -----------------------
 ---- LOOK AND FEEL ----

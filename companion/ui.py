@@ -7,9 +7,8 @@ import gi
 
 gi.require_version("Gtk", "4.0")
 gi.require_version("Gtk4LayerShell", "1.0")
-from gi.repository import Gdk, Gio, GLib, Gtk  # noqa: E402
-from gi.repository import Gtk4LayerShell as LayerShell  # noqa: E402
-
+from gi.repository import Gdk, Gio, GLib, Gtk
+from gi.repository import Gtk4LayerShell as LayerShell
 
 AVATAR_SIZE = 170
 KEYBOARD_SECONDS = 20  # Super+A with nothing typed: the keyboard goes back after this time

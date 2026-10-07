@@ -4,7 +4,6 @@ import urllib.parse
 
 from tools.common import spawn
 
-
 # ---------- browser ----------
 
 def open_url(runner, url):

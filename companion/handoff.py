@@ -31,11 +31,11 @@ ASK_FLAGS = ["-p", "--output-format", "json", "--permission-mode", "plan", "--to
              "--restricted", "--permission-prompts", "none", "--max-turns", "10", "--append-system-prompt", SPOKEN]
 # A request with one of these words changes something: Path B (a visible window)
 CHANGES = re.compile(r"\b(install|uninstall|reinstall|remove|delete|erase|wipe|edit|change|modify|fix|write|create|"
-                     r"rewrite|update|upgrade|configure|set up|enable|disable|rename|move|add|clean|sudo|root)\b", re.I)
+                     r"rewrite|update|upgrade|configure|set up|enable|disable|rename|move|add|clean|sudo|root)\b", re.IGNORECASE)
 ABOUT_SYSTEM = re.compile(r"\b(system|pc|laptop|computer|boot|service|update|driver|gpu|nvidia|wifi|bluetooth|sound|"
-                          r"audio|battery|slow|freez\w*|crash\w*|health|disk|memory|ram|kernel|hyprland)\b", re.I)
+                          r"audio|battery|slow|freez\w*|crash\w*|health|disk|memory|ram|kernel|hyprland)\b", re.IGNORECASE)
 ABOUT_REPO = re.compile(r"\b(dotfiles|config|hyprland|waybar|companion|companion|desktop|theme|keybinds?|zsh|kitty|"
-                        r"script|rofi|swaync|widget)\b", re.I)
+                        r"script|rofi|swaync|widget)\b", re.IGNORECASE)
 PATH_IN_TEXT = re.compile(r"(~/[^\s'\"]+|/(?:home|tmp|etc|usr|var|opt|srv|mnt)/[^\s'\"]+)")
 
 
@@ -169,7 +169,7 @@ def _kitty(runner, socket, *args, text=None):
 
 # Claude Code is asking something on its screen: typed text could answer it (and approve a change)
 QUESTION_ON_SCREEN = re.compile(r"trust (this|the) folder|Do you trust|Do you want to|don't ask again|"
-                                r"\b1\. Yes\b|\bproceed\?", re.I)
+                                r"\b1\. Yes\b|\bproceed\?", re.IGNORECASE)
 
 
 def _wait_ready(runner, socket, seconds=20):

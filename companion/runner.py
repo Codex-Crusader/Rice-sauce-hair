@@ -23,7 +23,7 @@ class Runner:
     def run(self, cmd, timeout=10, input=None, cwd=None):
         """Run a command and wait. ok is True when the exit code is 0. text is stdout, or stderr."""
         try:
-            r = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout, input=input, cwd=cwd)
+            r = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout, input=input, cwd=cwd, check=False)
         except (OSError, subprocess.TimeoutExpired) as e:
             return Result(False, f"error: {e}")
         return Result(r.returncode == 0, (r.stdout or r.stderr).strip())

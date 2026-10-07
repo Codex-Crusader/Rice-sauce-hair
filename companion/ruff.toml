@@ -1,0 +1,7 @@
+# Settings for `ruff check` (run from this folder). Lines up to 120 characters, as in the code.
+line-length = 120
+target-version = "py314"
+
+[lint]
+# Class tables (test cases, fake tabs, readings) are constants: nothing changes them
+ignore = ["RUF012"]

@@ -16,19 +16,19 @@ from unittest import mock
 HERE = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(HERE))
 
-import candidates  # noqa: E402
-import handoff  # noqa: E402
-import llm  # noqa: E402
-import mood  # noqa: E402
-import planner  # noqa: E402
-import policy  # noqa: E402
-import tools  # noqa: E402
-import voice  # noqa: E402
-from config import Config  # noqa: E402
-from policy import Verdict  # noqa: E402
-from runner import Result, Runner  # noqa: E402
-from session import Question, Session, Work  # noqa: E402
-from store import Store  # noqa: E402
+import candidates
+import handoff
+import llm
+import mood
+import planner
+import policy
+import tools
+import voice
+from config import Config
+from policy import Verdict
+from runner import Result, Runner
+from session import Question, Session, Work
+from store import Store
 
 TMP = Path(tempfile.mkdtemp(prefix="companion-test-"))
 
@@ -106,10 +106,11 @@ def make_session(plans=(), fail=()):
     events, ran = [], []
     s = Session(Config(PERSONA, data_dir=TMP), FakeChrome(), on_reply=lambda e, t: events.append(("reply", t)),
                 on_state=lambda x: None, on_question=lambda q: events.append(("confirm", q)), runner=FakeRunner())
-    for name, tool in s.tools.items():  # record actions, do not run them
+    def recorder(name):  # record actions, do not run them
+        return lambda **a: ran.append((name, a)) or (Result(False, "it broke") if name in fail else Result(True, "done"))
+    for name, tool in s.tools.items():
         if name not in ("list_tabs", "recall"):
-            tool.run = (lambda n: lambda **a: ran.append((n, a)) or
-                        (Result(False, "it broke") if n in fail else Result(True, "done")))(name)
+            tool.run = recorder(name)
     s.tools["list_windows"].run = lambda: Result(True, "kitty | zsh | workspace 1", untrusted=True)
     s.tools["close_window"].preview = lambda window: (True, f"close the window {window}")
     real_handle = s._handle
@@ -234,7 +235,7 @@ class Flow(unittest.TestCase):
         self.assertEqual(ran, list(steps))
 
     def test_answer_yes_runs_and_continues(self):
-        s, events, ran, model = make_session([do(("close_window", {"window": "kitty"}),
+        s, _events, ran, model = make_session([do(("close_window", {"window": "kitty"}),
                                                  ("set_volume", {"percent": "20"}))])
         run(s, model, "close kitty and set the volume to 20", answer=True)
         self.assertEqual([n for n, _ in ran], ["close_window", "set_volume"])
@@ -283,6 +284,10 @@ class ForcedHandoff(unittest.TestCase):
             briefs = self.handed if path == "B" else self.asked
             self.assertTrue(briefs and f"(exact words): {text}" in briefs[-1], (text, path))
 
+    def test_quarantine_delete_stays_with_her(self):  # her tool asks first; other deletes go to Claude Code
+        self.assertIsNone(planner.HANDOFF_KINDS.search("delete everything in the virus quarantine"))
+        self.assertIsNotNone(planner.HANDOFF_KINDS.search("delete everything in my downloads"))
+
     def test_path_a_says_it_is_asking_then_speaks_the_answer(self):
         s, events, _, model = make_session()
         run(s, model, "why is my build failing")
@@ -292,13 +297,13 @@ class ForcedHandoff(unittest.TestCase):
         self.assertEqual(len(replies), 2)
 
     def test_two_failures_hand_off(self):
-        s, _, ran, model = make_session([do(("set_volume", {"percent": "20"}), ("set_brightness", {"percent": 40}))],
+        s, _, _ran, model = make_session([do(("set_volume", {"percent": "20"}), ("set_brightness", {"percent": 40}))],
                                         fail={"set_volume", "set_brightness"})
         run(s, model, "volume 20 and brightness 40")
         self.assertEqual(len(self.handed), 1)
 
     def test_one_failure_plans_once_more(self):
-        s, _, ran, model = make_session([do(("set_volume", {"percent": "20"})), {"decision": "chat"}],
+        s, _, _ran, model = make_session([do(("set_volume", {"percent": "20"})), {"decision": "chat"}],
                                         fail={"set_volume"})
         run(s, model, "volume 20")
         self.assertEqual(len(model.seen), 2)
@@ -640,7 +645,7 @@ class SessionQueue(unittest.TestCase):
         self.assertIsNone(s.state.question)
 
     def test_remark_dropped_while_a_question_is_open(self):
-        s, events, _, model = make_session()
+        s, events, _, _model = make_session()
         s.state.question = "q"
         s.remark("idle thought")
         s.queue.join()
@@ -735,7 +740,7 @@ class FileBoundary(unittest.TestCase):
         for result in (tools.files.open_file(runner, self.deny, "/etc/passwd"),
                        tools.files.open_file(runner, self.deny, "~/run.sh"),
                        tools.files.show_in_file_manager(runner, self.deny, "~/.ssh"),
-                       tools.system.virus_scan(runner, self.deny, "/usr")):
+                       tools.system.virus_scan(runner, self.deny, self.home / "q", "/usr")):
             self.assertFalse(result.ok)
             self.assertTrue(result.final)
         self.assertEqual(runner.calls, [])
@@ -752,6 +757,144 @@ class FileBoundary(unittest.TestCase):
         rows = tools.files.find_files(runner, "f").text.splitlines()
         self.assertTrue(rows[0].startswith("~/f29.txt"))
         self.assertEqual(rows[-1], "... and 10 more")
+
+
+class Quarantine(unittest.TestCase):
+    """A found file moves to the quarantine, read only. Private folders and links are never moved."""
+
+    def setUp(self):
+        self.home = Path(tempfile.mkdtemp(dir=TMP)).resolve()
+        for name in ("Downloads/bad.exe", "Downloads/ok.txt", ".ssh/key"):
+            (self.home / name).parent.mkdir(parents=True, exist_ok=True)
+            (self.home / name).write_text("x")
+        os.chmod(self.home / "Downloads/bad.exe", 0o755)
+        (self.home / "Downloads/link").symlink_to(self.home / "Downloads/ok.txt")
+        self.deny = [self.home / ".ssh"]
+        self.q = self.home / ".local/share/companion/quarantine"
+        patch = mock.patch("pathlib.Path.home", lambda: self.home)
+        patch.start()
+        self.addCleanup(patch.stop)
+
+    def scan(self, *found, confirm=None, infected=None, crash=False):
+        """Fake clamscan. found: paths in the first output. confirm: paths the second scan confirms (default: all)."""
+        runner = FakeRunner()
+        first = [f"{p}: Win.Test.EICAR_HDB-1 FOUND" for p in found]
+        first += ["Scanned files: 3", f"Infected files: {len(found) if infected is None else infected}"]
+        second = [f"{p}: Win.Test.EICAR_HDB-1 FOUND" for p in (found if confirm is None else confirm)]
+
+        def run(cmd, **k):
+            if crash:
+                raise OSError("disk full")
+            runner.calls.append(cmd)
+            return Result(False, "\n".join(second if "--no-summary" in cmd else first))
+        runner.run = run
+        said = []
+        with mock.patch.dict(tools.system.scan, {"running": True, "on_done": said.append}):
+            tools.system._scan(runner, self.home / "Downloads", self.deny, self.q)
+            self.assertFalse(tools.system.scan["running"])
+        return (runner.calls[0] if runner.calls else None), said[0]
+
+    def files(self):
+        return tools.system._quarantined(self.q)
+
+    def test_found_file_moves_and_can_come_back(self):
+        cmd, said = self.scan(self.home / "Downloads/bad.exe")
+        self.assertIn("moved to the quarantine", said)
+        self.assertIn(f"--exclude-dir=^{self.home}/\\.ssh", cmd)
+        self.assertFalse((self.home / "Downloads/bad.exe").exists())
+        [kept] = [f for f in self.q.iterdir() if f.name != "records.json"]
+        self.assertEqual(kept.stat().st_mode & 0o777, 0o400)
+        self.assertIn("bad.exe", tools.system.list_quarantine(self.q).text)
+        self.assertTrue(tools.system.preview_restore(self.q, "bad.exe")[0])
+        self.assertTrue(tools.system.restore_from_quarantine(self.q, self.deny, "bad.exe").ok)
+        self.assertEqual((self.home / "Downloads/bad.exe").stat().st_mode & 0o777, 0o755)
+        self.assertIn("empty", tools.system.list_quarantine(self.q).text)
+
+    def test_private_folders_and_links_stay(self):
+        _, said = self.scan(self.home / ".ssh/key", self.home / "Downloads/link", "/etc/passwd")
+        self.assertEqual(said.count("not moved"), 3)
+        self.assertTrue((self.home / ".ssh/key").exists() and (self.home / "Downloads/link").is_symlink())
+
+    def test_forged_found_line_moves_nothing(self):
+        # a file named "x\n<thesis>: Fake FOUND" makes clamscan print a line for a clean file
+        (self.home / "thesis.pdf").write_text("my work")
+        _, said = self.scan(self.home / "thesis.pdf", confirm=[])
+        self.assertIn("did not confirm", said)
+        self.assertTrue((self.home / "thesis.pdf").exists())
+        self.assertEqual(self.files(), [])
+
+    def test_faked_relative_path_moves_nothing(self):
+        # a file named "x\n.bashrc: Fake FOUND": the faked path is relative, and the home folder has .bashrc
+        (self.home / ".bashrc").write_text("mine")
+        _, said = self.scan(".bashrc")
+        self.assertIn("did not confirm", said)
+        self.assertTrue((self.home / ".bashrc").exists())
+
+    def test_faked_option_never_reaches_clamscan(self):
+        # a file named "x\n--log=.bashrc: Fake FOUND" would make the second scan write into .bashrc
+        runner_calls = []
+        out = "--log=.bashrc: Fake FOUND\n--remove: Fake FOUND\nScanned files: 1\nInfected files: 1"
+        with (mock.patch.object(FakeRunner, "run", lambda self, cmd, **k: runner_calls.append(cmd) or Result(False, out)),
+              mock.patch.dict(tools.system.scan, {"running": True, "on_done": lambda r: None})):
+            tools.system._scan(FakeRunner(), self.home / "Downloads", self.deny, self.q)
+        self.assertEqual(len(runner_calls), 1)  # no second scan: nothing real to check
+        self.assertFalse(any(a.startswith("--log") or a == "--remove" for c in runner_calls for a in c))
+
+    def test_unreadable_names_are_reported(self):
+        _, said = self.scan(infected=2)
+        self.assertIn("2 found file(s) have a name", said)
+        self.assertNotIn("nothing found", said)
+
+    def test_a_crash_still_ends_the_scan(self):
+        _, said = self.scan(crash=True)
+        self.assertIn("failed: disk full", said)
+
+    def test_same_names_do_not_overwrite(self):
+        for i in range(3):
+            (self.home / "Downloads/bad.exe").write_text(f"copy {i}")
+            self.scan(self.home / "Downloads/bad.exe")
+        self.assertEqual(sorted(f.read_text() for f in self.files()), ["copy 0", "copy 1", "copy 2"])
+        self.assertTrue(tools.system.restore_from_quarantine(self.q, self.deny, tools.system._records(self.q)[0]["name"]).ok)
+        (self.home / "Downloads/bad.exe").chmod(0o600)
+        (self.home / "Downloads/bad.exe").write_text("copy 3")
+        self.scan(self.home / "Downloads/bad.exe")
+        self.assertEqual(len(self.files()), 3)
+
+    def test_restore_never_overwrites_or_leaves_home(self):
+        self.scan(self.home / "Downloads/bad.exe")
+        (self.home / "Downloads/bad.exe").write_text("new")
+        self.assertIn("exists again", tools.system.restore_from_quarantine(self.q, self.deny, "bad.exe").text)
+        self.assertEqual((self.home / "Downloads/bad.exe").read_text(), "new")
+        records = tools.system._records(self.q)
+        for bad in (str(self.home / ".ssh/authorized_keys"), "/etc/cron.d/evil"):  # a changed records.json
+            records[0]["from"] = bad
+            tools.system._save_records(self.q, records)
+            self.assertIn("refused", tools.system.restore_from_quarantine(self.q, self.deny, records[0]["name"]).text)
+        self.assertFalse((self.home / ".ssh/authorized_keys").exists())
+
+    def test_empty_also_deletes_files_without_a_record(self):
+        self.scan(self.home / "Downloads/bad.exe")
+        (self.q / "stray").write_text("x")
+        self.assertIn("2 quarantined", tools.system.preview_empty(self.q)[1])
+        tools.system.empty_quarantine(self.q)
+        self.assertEqual(self.files(), [])
+        self.assertTrue((self.home / "Downloads/ok.txt").exists())
+
+    def test_scan_folder_must_be_in_home(self):
+        for folder in ("/", "~/.ssh", "~/../..", "/etc"):
+            r = tools.system.virus_scan(FakeRunner(), self.deny, self.q, folder)
+            self.assertFalse(r.ok, folder)
+
+    def test_restore_and_delete_ask_first(self):
+        s = make_session()[0]
+        for name in ("restore_from_quarantine", "empty_quarantine"):
+            self.assertEqual(policy.decide(s.tools[name], {"name": "x"}).action, "confirm")
+
+    def test_empty_deletes_only_after_the_question(self):
+        self.scan(self.home / "Downloads/bad.exe")
+        self.assertTrue(tools.system.preview_empty(self.q)[0])
+        self.assertIn("deleted 1", tools.system.empty_quarantine(self.q).text)
+        self.assertFalse(tools.system.preview_empty(self.q)[0])
 
 
 class Results(unittest.TestCase):

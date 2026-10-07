@@ -1,5 +1,7 @@
 """System settings, diagnostics, the terminal, and the security checks."""
+import json
 import re
+import secrets
 import shutil
 import threading
 import time
@@ -9,7 +11,6 @@ import handoff
 from policy import TERMINAL_ONLY, PathRefused, is_claude_command, safe_path
 from runner import Result
 from tools.common import act, spawn
-
 
 # ---------- system settings (small and reversible) ----------
 
@@ -142,11 +143,18 @@ def security_check(runner, repo):
 
 
 # The virus scan runs in the background, so she stays free to talk. scan["on_done"](text) gets the result.
+# A found file is not deleted: it moves to the quarantine folder, read only, with a record of where it was.
+# Restore and permanent delete are separate tools that ask first (tier 1b).
 scan = {"running": False, "on_done": None}
+RECORDS = "records.json"
 
 
-def virus_scan(runner, deny, folder="~/Downloads"):
-    """Start a ClamAV scan of a folder in the home folder. Read only: nothing is deleted or moved."""
+def _posix_regex(path):
+    return "^" + re.sub(r"([.^$*+?()\[\]{}|\\])", r"\\\1", str(path))
+
+
+def virus_scan(runner, deny, quarantine, folder="~/Downloads"):
+    """Start a ClamAV scan of a folder in the home folder. Found files move to the quarantine."""
     try:
         p = safe_path(folder, deny)
     except PathRefused as e:
@@ -154,23 +162,169 @@ def virus_scan(runner, deny, folder="~/Downloads"):
     if scan["running"]:
         return Result(False, "failed: a virus scan is already running. Call stop_virus_scan to stop it.")
     scan["running"] = True
-    threading.Thread(target=_scan, args=(runner, p), daemon=True).start()
+    threading.Thread(target=_scan, args=(runner, p, deny, Path(quarantine)), daemon=True).start()
     return Result(True, f"the virus scan of {p} started in the background. "
                         f"Tell the user you will say the result when it is done.")
 
 
-def _scan(runner, folder):
-    r = runner.run(["clamscan", "--recursive", "--infected", "--suppress-ok-results", str(folder)], timeout=1800)
-    scan["running"] = False
-    lines = r.text.splitlines()
-    summary = [l for l in lines if l.startswith(("Scanned files", "Infected files", "Data scanned", "Time"))]
-    found = [l for l in lines if l.endswith("FOUND")]
-    if not summary:  # clamscan exits 1 when it finds a virus, so the summary decides, not the exit code
-        result = f"the virus scan did not finish: {r.text[-300:]}"
-    else:
-        result = "\n".join(summary + (["infected:"] + found if found else ["nothing found"]))
+def _scan(runner, folder, deny, quarantine):
+    try:
+        result = _scan_and_move(runner, folder, deny, quarantine)
+    except Exception as e:  # noqa: BLE001  (she must always hear that the scan ended)
+        result = f"the virus scan failed: {e}"
+    finally:
+        scan["running"] = False
+    _log(quarantine.parent / "virus-scans.log", folder, result)
     if scan["on_done"]:
         scan["on_done"](result)
+
+
+def _found(text):
+    """[(path, signature)] from clamscan output lines "path: Signature FOUND"."""
+    return [tuple(l.removesuffix(" FOUND").rsplit(": ", 1)) for l in text.splitlines() if l.endswith(" FOUND") and ": " in l]
+
+
+def _scan_and_move(runner, folder, deny, quarantine):
+    skip = [f"--exclude-dir={_posix_regex(d)}" for d in [*deny, quarantine]]
+    r = runner.run(["clamscan", "--recursive", "--infected", "--suppress-ok-results", *skip, str(folder)], timeout=3600)
+    summary = [l for l in r.text.splitlines() if l.startswith(("Scanned files", "Infected files", "Data scanned", "Time"))]
+    if not summary:  # clamscan exits 1 when it finds a virus, so the summary decides, not the exit code
+        return f"the virus scan did not finish: {r.text[-300:]}"
+    infected = int(next((l.split(":")[1] for l in summary if l.startswith("Infected files")), "0") or 0)
+    found = _found(r.text)
+    lines = list(summary)
+    if found:
+        # A file name with a line break can fake a FOUND line for another file: scan each named file again.
+        # A faked path cannot start with "/" (no "/" in a name), so only real paths reach the second scan,
+        # never a faked option such as --log=<file>.
+        inside = str(folder).rstrip("/") + "/"
+        real = [path for path, _ in found if path.startswith(inside)]
+        check = runner.run(["clamscan", "--no-summary", "--infected", *real], timeout=600) if real else Result(True, "")
+        confirmed = {path for path, _ in _found(check.text) if path in real}
+        lines.append("found:")
+        lines += [quarantine_file(quarantine, deny, path, sig) if path in confirmed
+                  else f"{path}: not moved, a second scan did not confirm it" for path, sig in found]
+        if len(confirmed) < len(found):
+            lines.append(f"Warning: a file name in {folder} may hide a line break to fake these lines. "
+                         f"The real infected file is still there: check that folder by hand.")
+    if infected > len(found):
+        lines.append(f"{infected - len(found)} found file(s) have a name that the scan output cannot show "
+                     f"(see the clamscan output); they were not moved")
+    if not found and not infected:
+        lines.append("nothing found")
+    return "\n".join(lines)
+
+
+def _log(log, folder, result):
+    try:
+        log.parent.mkdir(parents=True, exist_ok=True)
+        with log.open("a") as f:
+            f.write(f"--- {time.strftime('%Y-%m-%d %H:%M')} scan of {folder}\n{result}\n")
+    except OSError:
+        pass  # a full disk must not stop her from saying the result
+
+
+def _records(quarantine):
+    try:
+        return json.loads((quarantine / RECORDS).read_text())
+    except (OSError, json.JSONDecodeError):
+        return []
+
+
+def _save_records(quarantine, records):
+    tmp = quarantine / (RECORDS + ".new")  # write, then replace: a crash never leaves half a file
+    tmp.write_text(json.dumps(records, indent=1))
+    tmp.replace(quarantine / RECORDS)
+
+
+def _quarantined(quarantine):
+    """All files in the quarantine folder, also ones without a record."""
+    q = Path(quarantine)
+    return [f for f in q.iterdir() if f.name not in (RECORDS, RECORDS + ".new")] if q.is_dir() else []
+
+
+def quarantine_file(quarantine, deny, path, signature):
+    """Move one found file into the quarantine, read only. Returns one line for the user."""
+    if Path(path).is_symlink():  # safe_path follows links: never move the file that a link points to
+        return f"{path} ({signature}): not moved, it is a link"
+    try:
+        real = safe_path(path, deny)
+    except PathRefused as e:
+        return f"{path} ({signature}): not moved, {e}"
+    if not real.is_file():
+        return f"{path} ({signature}): not moved, it is not a plain file"
+    quarantine.mkdir(parents=True, exist_ok=True)
+    quarantine.chmod(0o700)
+    name = f"{time.strftime('%Y%m%d-%H%M%S')}-{secrets.token_hex(4)}-{real.name}"
+    mode = real.stat().st_mode & 0o777
+    try:
+        shutil.move(real, quarantine / name)
+    except OSError as e:
+        return f"{path} ({signature}): not moved, {e}"
+    (quarantine / name).chmod(0o400)  # no write, no run
+    _save_records(quarantine, [*_records(quarantine),
+        {"name": name, "from": str(real), "signature": signature, "mode": mode, "date": time.strftime("%Y-%m-%d %H:%M")}])
+    return f"{path} ({signature}): moved to the quarantine"
+
+
+def list_quarantine(quarantine):
+    records = _records(Path(quarantine))
+    rows = [f"{r['name']}: {r['signature']}, from {r['from']}, {r['date']}" for r in records]
+    known = {r["name"] for r in records}
+    rows += [f"{f.name}: no record" for f in _quarantined(quarantine) if f.name not in known]
+    if not rows:
+        return Result(True, "the quarantine is empty", final=True)
+    return Result(True, "\n".join(rows), untrusted=True)
+
+
+def _find(quarantine, name):
+    return [r for r in _records(Path(quarantine)) if name and (name == r["name"] or name in r["from"])]
+
+
+def preview_restore(quarantine, name):
+    hits = _find(quarantine, name)
+    if len(hits) != 1:
+        return False, f"{len(hits)} quarantined files match '{name}'. Use a name from list_quarantine."
+    r = hits[0]
+    return True, f"put {r['from']} back? ClamAV found {r['signature']} in it. Only say yes if you trust this file."
+
+
+def restore_from_quarantine(quarantine, deny, name):
+    quarantine = Path(quarantine)
+    hits = _find(quarantine, name)
+    if len(hits) != 1:
+        return Result(False, f"{len(hits)} quarantined files match '{name}'", final=True)
+    r = hits[0]
+    target = Path(r["from"])
+    try:
+        safe_path(target.parent, deny)
+    except PathRefused as e:
+        return Result(False, f"refused: {e}", final=True)
+    if target.exists() or target.is_symlink():
+        return Result(False, f"failed: {target} exists again. Rename or move it first.", final=True)
+    shutil.move(quarantine / r["name"], target)
+    target.chmod(r["mode"])
+    _save_records(quarantine, [x for x in _records(quarantine) if x["name"] != r["name"]])
+    return Result(True, f"put back {target}")
+
+
+def preview_empty(quarantine):
+    n = len(_quarantined(quarantine))
+    if not n:
+        return False, "the quarantine is empty"
+    return True, f"delete the {n} quarantined file(s) for good? This cannot be undone."
+
+
+def empty_quarantine(quarantine):
+    files = _quarantined(quarantine)
+    for f in files:
+        if f.is_dir() and not f.is_symlink():
+            shutil.rmtree(f)
+        else:
+            f.unlink(missing_ok=True)
+    if files:
+        _save_records(Path(quarantine), [])
+    return Result(True, f"deleted {len(files)} quarantined file(s)")
 
 
 def stop_virus_scan(runner):

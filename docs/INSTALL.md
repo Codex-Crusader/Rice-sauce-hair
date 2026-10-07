@@ -76,11 +76,16 @@ After each Hyprland update, run `hyprpm update` (or `sysupdate`, which does it f
 
 ## 5. The AI companion (optional)
 
-1. Start Ollama and download the model:
+1. Start Ollama and download the model. Start the daily virus signature update (for her virus scan):
    ```sh
    sudo systemctl enable --now ollama
    ollama pull qwen3:8b
+   sudo freshclam
+   sudo install -Dm644 ~/dotfiles/system/etc/systemd/system/clamav-freshclam-once.timer.d/delay.conf \
+       /etc/systemd/system/clamav-freshclam-once.timer.d/delay.conf
+   sudo systemctl enable --now clamav-freshclam-once.timer
    ```
+   The drop-in starts the update 2 minutes after boot, not up to 1 hour after, so short sessions also get it.
 2. Edit `~/dotfiles/companion/persona.toml`: her name, your name, and her character.
    See [The companion](COMPANION.md).
 3. Chrome tab control (optional):

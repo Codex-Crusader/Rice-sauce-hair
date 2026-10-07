@@ -2,7 +2,6 @@
 from runner import Result
 from tools.common import dispatch, hypr_json
 
-
 # ---------- windows ----------
 
 def list_windows(runner):

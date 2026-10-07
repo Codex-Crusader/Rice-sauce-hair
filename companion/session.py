@@ -34,7 +34,7 @@ YES, NO = ("yes", "y", "ok", "okay", "sure", "do it"), ("no", "n", "nope", "don'
 HISTORY_LIMIT = 64  # chat messages kept (the model sees fewer)
 # Tools that act on one tab or window, and the argument that names it: what "it" means next time
 # "bring up my editor": she means the open window, not a new one
-BRING_UP = re.compile(r"\b(bring up|show me|switch to|go to|go back to|back to|focus|pull up)\b", re.I)
+BRING_UP = re.compile(r"\b(bring up|show me|switch to|go to|go back to|back to|focus|pull up)\b", re.IGNORECASE)
 TARGET_ARGS = {"tell_claude": ("claude", "message"), "web_search": ("tab", "query"), "switch_tab": ("tab", "tab"),
                "open_tab": ("tab", "url"), "open_url": ("tab", "url"), "focus_window": ("window", "window"),
                "open_app": ("window", "name")}
@@ -392,7 +392,7 @@ class Session:
             return True, f'{tool.name.replace("_", " ")}: {", ".join(str(v) for v in args.values())}'
         try:
             return tool.preview(**args)
-        except Exception:
+        except Exception:  # noqa: BLE001  (the model's arguments can break a preview in any way)
             return False, f"wrong arguments for {tool.name}"
 
     def _say(self, note, work=None, keep=True):
