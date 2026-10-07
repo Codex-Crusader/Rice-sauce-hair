@@ -159,6 +159,9 @@ def virus_scan(runner, deny, quarantine, folder="~/Downloads"):
         p = safe_path(folder, deny)
     except PathRefused as e:
         return Result(False, f"refused: {e}. Tell the user plainly.", final=True)
+    if not shutil.which("clamscan"):
+        return Result(False, "ClamAV is not installed, so there is no virus scan. To install it: sudo pacman -S clamav, "
+                             "then the virus signature steps in docs/INSTALL.md (step 5).", final=True)
     if scan["running"]:
         return Result(False, "failed: a virus scan is already running. Call stop_virus_scan to stop it.")
     scan["running"] = True

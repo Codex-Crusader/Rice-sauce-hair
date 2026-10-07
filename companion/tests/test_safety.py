@@ -880,6 +880,19 @@ class Quarantine(unittest.TestCase):
         self.assertEqual(self.files(), [])
         self.assertTrue((self.home / "Downloads/ok.txt").exists())
 
+    def test_no_clamav_says_how_to_install(self):
+        runner = FakeRunner()
+        r = tools.system.virus_scan(runner, self.deny, self.q, "~/Downloads")  # the test machine has no clamscan
+        self.assertFalse(r.ok)
+        self.assertTrue(r.final)
+        self.assertIn("pacman -S clamav", r.text)
+        self.assertEqual(runner.calls, [])
+        self.assertFalse(tools.system.scan["running"])
+        with mock.patch("shutil.which", lambda name: "/usr/bin/clamscan"), \
+             mock.patch("threading.Thread"):  # installed: the scan starts (the thread is not run here)
+            self.assertTrue(tools.system.virus_scan(runner, self.deny, self.q, "~/Downloads").ok)
+        tools.system.scan["running"] = False
+
     def test_scan_folder_must_be_in_home(self):
         for folder in ("/", "~/.ssh", "~/../..", "/etc"):
             r = tools.system.virus_scan(FakeRunner(), self.deny, self.q, folder)
