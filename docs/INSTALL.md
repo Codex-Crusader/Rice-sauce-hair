@@ -154,6 +154,18 @@ The hook assumes the EFI partition at `/boot/efi` and the boot entry name `GRUB`
 sudo install -Dm644 ~/dotfiles/system/etc/pacman.d/hooks/95-grub-install.hook /etc/pacman.d/hooks/95-grub-install.hook
 ```
 
+### Package cache
+
+The pacman cache keeps old package files, and it grows with each update. `paccache.timer` (from
+`pacman-contrib`) cleans it each week. The drop-in keeps only the newest copy of each installed package:
+
+```sh
+sudo install -Dm644 ~/dotfiles/system/etc/systemd/system/paccache.service.d/keep-one.conf \
+    /etc/systemd/system/paccache.service.d/keep-one.conf
+sudo systemctl daemon-reload
+sudo systemctl enable --now paccache.timer
+```
+
 ### Hybrid GPU laptops (AMD or Intel iGPU plus NVIDIA)
 
 Hyprland can run on the iGPU only, so the NVIDIA GPU can sleep.
