@@ -581,6 +581,14 @@ class Voice(unittest.TestCase):
         self.assertEqual(voice.clean('Done. (tools: tell_claude: typed "hi" and press'), ("idle", "Done."))
 
 
+class Search(unittest.TestCase):
+    def test_result_says_she_cannot_see_the_page(self):
+        from tools import browser
+        r = browser.web_search(FakeRunner(), "feet")
+        self.assertTrue(r.text.startswith("opened https://www.google.com/search?q=feet"))
+        self.assertIn("cannot see the page", r.text)
+
+
 class Tiers(unittest.TestCase):
     def call(self, s, name, args, text=""):
         return policy.decide(s.tools[name], args, text).action == "confirm"

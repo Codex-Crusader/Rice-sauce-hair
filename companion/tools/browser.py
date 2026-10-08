@@ -6,10 +6,14 @@ from tools.common import spawn
 
 # ---------- browser ----------
 
-def open_url(runner, url):
+def open_url(runner, url, note=""):
     if not url.startswith(("http://", "https://")):
         url = "https://" + url
-    return spawn(runner, ["flatpak", "run", "com.google.Chrome", url], f"opened {url}")
+    return spawn(runner, ["flatpak", "run", "com.google.Chrome", url], f"opened {url}{note}")
+
+
+# She only opens the page; without this note the model describes results it never saw
+UNSEEN = ". You cannot see the page or the results: do not describe them or offer to summarize them"
 
 
 # Site search pages, checked with curl (each returns the search results page).
@@ -39,7 +43,7 @@ def web_search(runner, query, site=""):
     else:  # unknown site: Google, limited to that site
         domain = key if "." in key else f"{key}.com"
         url = SEARCH_URLS["google"].format(q + urllib.parse.quote_plus(f" site:{domain}"))
-    return open_url(runner, url)
+    return open_url(runner, url, UNSEEN)
 
 
 def open_or_switch(runner, chrome, url):
