@@ -575,6 +575,10 @@ class Voice(unittest.TestCase):
         self.assertEqual(voice.clean('"All done."'), ("idle", "All done."))
         self.assertEqual(voice.clean("[worried] It failed. Let me know if you need anything else."),
                          ("worried", "It failed."))
+        self.assertEqual(voice.clean("[idle] [thinking] No Netflix tab is open."), ("idle", "No Netflix tab is open."))
+        self.assertEqual(voice.clean("I opened the terminal. 🐱 (tools: run_in_terminal: ok) (tools: run_in_terminal: ok)"),
+                         ("idle", "I opened the terminal. 🐱"))
+        self.assertEqual(voice.clean('Done. (tools: tell_claude: typed "hi" and press'), ("idle", "Done."))
 
 
 class Tiers(unittest.TestCase):

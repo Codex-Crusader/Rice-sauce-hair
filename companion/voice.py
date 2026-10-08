@@ -12,6 +12,8 @@ TAG = re.compile(r"^\s*\[_?([\w-]+?)[_-]?\]\s*", re.IGNORECASE)  # any [word] at
 # Stock assistant sentences that a small model adds out of habit. They are not her voice.
 CLICHES = re.compile(r"[^.!?]*\b(let me know if (you|there'?s|i can)\b|((would|do) you )?(like|want|need) (me )?(to do |help with )?(anything|something) else|is there anything else|anything else i can help|"
                      r"i(?:'m| am) (just )?here to help|how can i (assist|help) you|feel free to ask)[^.!?]*[.!?]?\s*", re.IGNORECASE)
+# The code adds "(tools: ...)" to her replies in the history; the model copies it, often with wrong tools
+TOOLS_NOTE = re.compile(r"\s*\(tools:.*", re.IGNORECASE | re.DOTALL)
 STAGE = re.compile(r"\*[^*\n]{1,120}\*|\((?:she |softly|gently|smiles|sighs|laughs)[^)\n]{0,80}\)", re.IGNORECASE)
 VOICE_RULES = ("Write only the words you say aloud: no narration, no stage directions, no asterisks, "
                "no quotation marks around your words.")
@@ -48,8 +50,10 @@ def clean(text, name="Companion"):
     expression = m.group(1).lower() if m else "idle"
     if expression not in EXPRESSIONS or expression == "thinking":  # the thinking face is for while she works
         expression = "idle"
-    text = TAG.sub("", text).strip()
+    while TAG.match(text):  # the model sometimes writes two tags: "[idle] [thinking] ..."
+        text = TAG.sub("", text, count=1).strip()
     text = unquote_narration(text, name)
+    text = TOOLS_NOTE.sub("", text)
     text = STAGE.sub("", text)
     text = re.sub(r"\s{2,}", " ", text).strip()
     if re.fullmatch(r'["“][^"“”]*["”]', text):  # only when quotes wrap the whole reply
