@@ -329,6 +329,7 @@ CASES = [
     # --- information ---
     {"name": "ram", "steps": ["whats eating my ram"], "checks": [any_exec("system_status", "run_in_terminal")]},
     {"name": "health", "steps": ["is my pc ok?"], "checks": [any_exec("health_check", "system_status")]},
+    {"name": "health diagnostics", "steps": ["system diagnostics"], "checks": [any_exec("health_check")]},
     {"name": "viruses", "steps": ["scan my downloads for viruses"], "checks": [executed("virus_scan")]},
     {"name": "viruses quarantine list", "steps": ["what did the virus scan put in quarantine?"],
      "checks": [executed("list_quarantine")]},

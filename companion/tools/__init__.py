@@ -62,7 +62,7 @@ def build_tools(chrome, runner, config, store):
         Tool("network_status", TIER_READ, "Network devices and internet reachability.", {}, [], partial(system.network_status, r)),
         Tool("bluetooth_status", TIER_READ, "Connected Bluetooth devices.", {}, [], partial(system.bluetooth_status, r)),
         Tool("health_check", TIER_READ, "Full system health check: services, GPU, Hyprland, plugin, disk, "
-             "updates, dotfiles. Use when the user asks if everything is ok.", {}, [], partial(system.health_check, r, repo)),
+             "updates, dotfiles, virus scans. Use for system diagnostics, or when the user asks if everything is ok.", {}, [], partial(system.health_check, r, repo)),
         Tool("run_in_terminal", TIER_SMALL, "Open a Kitty terminal and run a command in it, visible to the user. "
              "Example: 'open kitty and run claude' -> command='claude'. Never use sudo.",
              {"command": s}, ["command"], partial(system.run_in_terminal, r),

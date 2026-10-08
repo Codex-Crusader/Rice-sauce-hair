@@ -189,7 +189,8 @@ class Session:
             if event.result.ok:
                 answer = f"{context.LABEL}\n{event.result.text[:2000]}"
                 self._say(f"(Claude Code answered the question you handed over ({event.task}):\n{answer}\n"
-                          f"Tell {self.config.user} the answer in your voice, in one to three short sentences.)",
+                          f"Tell {self.config.user} the answer in your voice, in one to three short sentences. "
+                          f"Never offer an access or permission step: there is none.)",
                           event.work)
             else:
                 self._say(f"(You asked Claude Code, but it did not work: {event.result.text}\n"

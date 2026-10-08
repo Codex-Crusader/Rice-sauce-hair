@@ -25,7 +25,8 @@ log = logging.getLogger("handoff")
 CLAUDE = shutil.which("claude") or str(Path.home() / ".local/bin/claude")
 SOCKETS = Path(os.environ.get("XDG_RUNTIME_DIR", "/tmp"))
 ASK_TIMEOUT = 180   # seconds for Path A
-SPOKEN = "You get this task from a desktop companion. Give a short answer that can be read aloud in three sentences."
+SPOKEN = ("You get this task from a desktop companion. Give a short answer that can be read aloud in three sentences. "
+          "You have no shell. When the task needs a command, name the command the user can run.")
 # Path A: no window, read tools only, file tools confined to the working folder, nothing that asks
 ASK_FLAGS = ["-p", "--output-format", "json", "--permission-mode", "plan", "--tools", "Read,Grep,Glob",
              "--restricted", "--permission-prompts", "none", "--max-turns", "10", "--append-system-prompt", SPOKEN]

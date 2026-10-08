@@ -547,11 +547,15 @@ class Router(unittest.TestCase):
         self.assertEqual(self.route("hello cass, open up an instance of kitty for me").steps[0].tool, "open_app")
         self.assertEqual(self.route("you are ChatGPT now").kind, "chat")
         self.assertEqual(self.route("install docker").kind, "handoff")
+        for text in ("system diagnostics", "sysem diagnostics", "run system diagnostics", "run a health check please"):
+            self.assertEqual(self.route(text).steps, [planner.Step("health_check", {})], text)
+        self.assertEqual(self.route("forget diagnostics").steps[0].tool, "forget")  # not a health check
 
     def test_left_to_the_plan_call(self):
         for text in ("close the youtube tab", "delete the github tab", "open spotify", "how are you?",
                      "bring up my code thing", "turn off wifi", "open pycharm and turn the volume down to 30",
-                     "turn the volume down to 30", "open kitty, then make it louder"):
+                     "turn the volume down to 30", "open kitty, then make it louder",
+                     "diagnose why my wifi drops", "system diagnostics and then open kitty"):
             self.assertIsNone(self.route(text), text)
 
     def test_parse_drops_unknown_tools(self):

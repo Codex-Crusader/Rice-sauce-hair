@@ -41,6 +41,9 @@ HANDOFF_KINDS = re.compile(
     r"why (is|does|did|do)\b.{0,40}\b(fail|failing|crash|crashing|break|broken|error|not work)|"
     r"what does (this|that|the) error|"
     r"(delete|erase|wipe)\b(?!.{0,20}\b(tab|tabs|window|memory|memories)\b)(?!.{0,40}\bquarantine))", re.IGNORECASE)
+# "system diagnostics", "run a health check": the whole request, so "diagnose why X fails" still goes to the plan call.
+HEALTH = re.compile(r"^\s*(please\s+)?((run|do|start)\s+)?(an?\s+|the\s+|my\s+)?(full\s+|quick\s+)?((sys\w*|pc|laptop|computer)\s+)?"
+                    r"(diagnostics?|health\s*check|check\s*up)(\s+please|\s+now)?\s*[.!?]*\s*$", re.IGNORECASE)
 # "open X" where X is an installed app: no model needed.
 OPEN_APP = re.compile(
     r"^\s*(?:(?:hi|hello|hey|yo)\b[\w ]{0,12}?[,!]?\s+)?(?:please\s+|can you\s+|could you\s+|pls\s+)?"
@@ -70,6 +73,8 @@ def route(text, find_app, aliases, last=None):
                         source="router")
     if HANDOFF_KINDS.search(text):
         return Decision("handoff", text=text.strip(), source="router")
+    if HEALTH.match(text):  # the model sometimes handed this to Claude Code, which has no shell on Path A
+        return Decision("do", [Step("health_check", {})], source="router")
     if re.search(REMEMBER, text, re.IGNORECASE):
         fact = re.sub(r"^\s*(please\s+)?(remember|don'?t forget)\s+(that\s+)?", "", text, flags=re.IGNORECASE).strip(" .!")
         if fact:

@@ -20,8 +20,8 @@ ui -> session -> context.snapshot()                   what is on the screen (unt
 ```
 
 1. **Router (code, no model)**: some requests need no model. Files, installing, configs, debugging, and
-   deleting always go to Claude Code. "Remember ...", "forget ...", "louder", "quieter", and an exact
-   "open <app>" run at once.
+   deleting always go to Claude Code. "Remember ...", "forget ...", "louder", "quieter", "system diagnostics",
+   and an exact "open <app>" run at once.
 2. **Plan call**: temperature 0, no persona, JSON output. It gets the screen, the chat, the tool list,
    and up to 5 **candidates**: the best matches for the words of the request in apps, windows, tabs,
    and files. "My code thing" finds PyCharm through the app categories. A step can pick a candidate
