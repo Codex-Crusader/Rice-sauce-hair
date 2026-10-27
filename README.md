@@ -11,6 +11,8 @@ recovery tools, a health check, and a companion in the corner of the screen. You
 vague words. She opens apps and files, controls windows, tabs, and settings, runs safe commands, and
 hands hard tasks to Claude Code. Her model runs on your computer.
 
+> **Written up in full:** [Hyprland AI assistant on Ollama: teaching it when to say no](https://codex-crusader.github.io/writing/local-ai-desktop-companion-hyprland/)
+
 **Desktop tour:** widgets, terminals, launcher, quick settings.
 
 ![Desktop tour](assets/showcase.gif)
