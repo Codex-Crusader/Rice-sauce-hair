@@ -3,10 +3,13 @@
 Signals: SIGUSR1 focuses her text box (Super+A), SIGUSR2 hides or shows her (Super+Shift+A).
 """
 import logging
+import logging.handlers
 import os
 import random
 import signal
 import subprocess
+import sys
+import threading
 import time
 from pathlib import Path
 
@@ -28,10 +31,19 @@ from ui import CompanionWindow
 os.environ.pop("LD_PRELOAD", None)
 
 
+LOG_BYTES, LOG_COPIES = 2_000_000, 2  # brain.log, brain.log.1, brain.log.2: at most about 6 MB
+
+
 def setup_logging(config):
-    """Log to the cache folder. Called once at start, not at import."""
+    """Log to the cache folder, with a size limit. Called once at start, not at import.
+    Errors outside the worker (GTK callbacks, timer and scan threads) go to the same log."""
     config.cache_dir.mkdir(parents=True, exist_ok=True)
-    logging.basicConfig(filename=config.log_file, level=logging.INFO, format="%(asctime)s %(message)s")
+    handler = logging.handlers.RotatingFileHandler(config.log_file, maxBytes=LOG_BYTES, backupCount=LOG_COPIES)
+    logging.basicConfig(handlers=[handler], level=logging.INFO, format="%(asctime)s %(message)s")
+    log = logging.getLogger("crash")
+    sys.excepthook = lambda kind, e, tb: log.error("uncaught error", exc_info=(kind, e, tb))
+    threading.excepthook = lambda a: log.error("uncaught error in thread %s", a.thread.name if a.thread else "?",
+                                               exc_info=(a.exc_type, a.exc_value, a.exc_traceback))
 
 
 def on_main(fn):
@@ -56,7 +68,8 @@ class Companion(Gtk.Application):
         chrome = ChromeBridge(self.config.config_dir / "token")
         self.session = Session(self.config, chrome,
                                on_reply=on_main(lambda e, t: self.window.say(e, t)),
-                               on_state=on_main(self.window.set_expression),
+                               on_state=on_main(lambda state: self.window.think() if state == "thinking"
+                                                else self.window.set_expression(state)),
                                on_question=on_main(lambda q: self.window.say("worried", q, ask=True)))
         self.window.asking = self.session.asking
         tools.scan["on_done"] = lambda result: self.session.remark(
@@ -76,7 +89,7 @@ class Companion(Gtk.Application):
     def menu(self, name):
         """Right-click menu on her face."""
         if name == "health":
-            self.send("Run a health check and tell me what you find.")
+            self.send("run a health check")  # the router runs only health_check; no plan call adds other tools
         elif name == "pause":
             self.remarks_paused = not self.remarks_paused
             self.window.say("idle", "I will stay quiet until you talk to me." if self.remarks_paused

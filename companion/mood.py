@@ -8,9 +8,13 @@ import re
 import time
 
 FADE_SECONDS = 2 * 3600
+SHORT_AWAY = 3 * 3600  # less than this is "a short time": she must not say "it has been a while"
 
 WARM = re.compile(r"\b(thank|thanks|thx|love|cute|good job|well done|great|awesome|nice|sweet|kind(?! of))\b|❤|🥰|😊|🦋", re.IGNORECASE)
 HARSH = re.compile(r"\b(stupid|useless|dumb|shut up|idiot|hate you)\b", re.IGNORECASE)
+# A problem in a tool's output: whole words at the start of a line or after a colon,
+# so a file named error.log does not count
+PROBLEM = re.compile(r"(^|:\s*)(WARN|FAIL|failed|error)\b|\bFOUND$", re.MULTILINE)
 PLAYFUL = re.compile(r"\b(haha|lol|lmao|tease|joke|silly)\b|😂|😜|😏", re.IGNORECASE)
 
 # How each mood colors her words. One line each, so the prompt stays short. {user} is the user's name.
@@ -44,6 +48,12 @@ def ago(seconds):
     return "a moment"
 
 
+def found_problem(result):
+    """True when a tool's output reports a problem (a health WARN line, a failed service, a virus)."""
+    text = str(result)
+    return bool(PROBLEM.search(text)) and "no errors" not in text
+
+
 class Mood:
     def __init__(self, store, user="the user", moods=None):
         self.store = store
@@ -69,9 +79,7 @@ class Mood:
 
     def note_result(self, result):
         """Problems found by a tool worry her; a fix makes her cheerful again."""
-        text = str(result)
-        # whole words at the start of a line or after a colon, so a file named error.log does not count
-        if re.search(r"(^|:\s*)(WARN|FAIL|failed|error)\b|\bFOUND$", text, re.MULTILINE) and "no errors" not in text:
+        if found_problem(result):
             self.set("worried", "you just found a problem on the system")
 
     # ----- what she reads -----
@@ -90,7 +98,10 @@ class Mood:
         """How long the user was away before this session, for the greeting."""
         if not self.previous_visit:
             return f"This is the first time you meet {self.user} here."
-        return f"{self.user} was last here {ago(time.time() - self.previous_visit)} ago."
+        away = time.time() - self.previous_visit
+        if away < SHORT_AWAY:
+            return f"{self.user} was here {ago(away)} ago, a short time. Do not say that it has been a while."
+        return f"{self.user} was last here {ago(away)} ago."
 
     # ----- saved conversation -----
 

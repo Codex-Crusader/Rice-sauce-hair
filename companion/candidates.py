@@ -17,6 +17,7 @@ from tools.files import KINDS, SCAN_LIMIT, newest, short
 LIMIT = 5
 # "open kitty" means a new one; "bring up kitty" means the open window
 OPEN_NEW = re.compile(r"\b(open|start|launch|run|fire up|boot up|kholo|khol do|chalao|chala do)\b", re.IGNORECASE)
+# "bring up my editor": the open window, not a new one (session.py uses this too)
 BRING_UP = re.compile(r"\b(bring up|show me|switch to|go to|back to|focus|pull up)\b", re.IGNORECASE)
 STOP = {"the", "a", "an", "my", "me", "i", "it", "that", "this", "thing", "stuff", "one", "up", "please", "pls",
         "can", "could", "you", "open", "bring", "show", "start", "launch", "switch", "go", "to", "back", "focus",

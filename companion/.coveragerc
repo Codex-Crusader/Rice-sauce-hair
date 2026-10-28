@@ -1,0 +1,8 @@
+# Live coverage of Companion: the launcher uses it when ~/.config/companion/coverage exists.
+# Report: python3 -m coverage report   (from this folder)
+[run]
+source = .
+omit = tests/*
+data_file = ${HOME}/.cache/companion/coverage
+# systemctl stop sends SIGTERM: save the data before the process ends
+sigterm = true

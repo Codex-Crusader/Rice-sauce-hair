@@ -12,6 +12,8 @@ from gi.repository import Gtk4LayerShell as LayerShell
 
 AVATAR_SIZE = 170
 KEYBOARD_SECONDS = 20  # Super+A with nothing typed: the keyboard goes back after this time
+THINK_SECONDS = 90     # the "…" bubble goes away after this time, also if no reply comes
+SENT_LIMIT = 50        # earlier messages that Up and Down bring back
 
 CSS_FILE = Path(__file__).with_name("ui.css")  # colors by name from theme/gtk/palette.css
 
@@ -39,6 +41,7 @@ class CompanionWindow(Gtk.ApplicationWindow):
         self.asking = lambda: False  # main.py sets this to session.asking
         self.textures = {}
         self.expression = "idle"
+        self.sent, self.sent_index = [], 0  # the user's earlier messages, for Up and Down
         self.add_css_class("companion")
         self._layer_shell()
         self._build()
@@ -66,7 +69,8 @@ class CompanionWindow(Gtk.ApplicationWindow):
         self.bubble.add_css_class("bubble")
         name = Gtk.Label(label=self.persona["name"].upper(), xalign=0)
         name.add_css_class("name")
-        self.text = Gtk.Label(wrap=True, xalign=0, width_chars=24, max_width_chars=34)
+        # selectable: the user can copy a command she names (right-click: Copy)
+        self.text = Gtk.Label(wrap=True, xalign=0, width_chars=24, max_width_chars=34, selectable=True)
         self.buttons = Gtk.Box(spacing=8, halign=Gtk.Align.END)
         yes, no = Gtk.Button(label="Yes"), Gtk.Button(label="No")
         yes.add_css_class("yes")
@@ -88,12 +92,13 @@ class CompanionWindow(Gtk.ApplicationWindow):
         self.face.set_size_request(AVATAR_SIZE, AVATAR_SIZE)
         self.entry = Gtk.Entry(placeholder_text=f"Talk to {self.persona['name']}...", width_chars=18)
         self.entry.add_css_class("talk")
-        self.entry.set_tooltip_text("Type here and press Enter (Super+A).\nEsc: stop typing.")
+        self.entry.set_tooltip_text("Type here and press Enter (Super+A).\nUp and Down: your earlier messages.\n"
+                                    "Esc: stop typing. Type stop while she works to stop her.")
         self.face.set_tooltip_text(f"{self.persona['name']}\nClick: talk to her. Right-click: menu "
                                    "(health check, pause her remarks, hide, restart, log).\nSuper+Shift+A: hide or show.")
         self.entry.connect("activate", self._send)
         keys = Gtk.EventControllerKey()
-        keys.connect("key-pressed", lambda _c, key, *_: key == Gdk.KEY_Escape and (self.release() or True))
+        keys.connect("key-pressed", self._on_key)
         self.entry.add_controller(keys)
         click = Gtk.GestureClick()
         click.connect("pressed", lambda *_: self.entry.grab_focus())
@@ -168,6 +173,9 @@ class CompanionWindow(Gtk.ApplicationWindow):
         GLib.timeout_add(random.randint(2500, 5500), self._blink)
 
     def _blink(self, again=True):
+        if not self.get_visible():  # hidden: no texture change, only the next check
+            self._plan_blink()
+            return False
         file = self.avatar_dir / self.expressions[self.expression]
         closed = self._texture(file.with_name(file.stem + "-blink.png"))
         if closed:
@@ -196,10 +204,36 @@ class CompanionWindow(Gtk.ApplicationWindow):
         else:
             self._schedule_hide(6 + len(text) // 14)  # longer text stays longer
 
+    def think(self):
+        """While she works: her thinking face and a "…" bubble, so the user sees that she got it."""
+        self.set_expression("thinking")
+        if self.asking():  # keep the question and its Yes and No buttons
+            return
+        self.text.set_text("\u2026")
+        self.buttons.set_visible(False)
+        self.bubble_window.set_default_size(1, 1)
+        self.bubble_window.present()
+        self._schedule_hide(THINK_SECONDS)
+
+    def _on_key(self, _controller, key, _code, _state):
+        if key == Gdk.KEY_Escape:
+            self.release()
+            return True
+        if key in (Gdk.KEY_Up, Gdk.KEY_Down) and self.sent:
+            step = -1 if key == Gdk.KEY_Up else 1
+            self.sent_index = max(0, min(len(self.sent), self.sent_index + step))
+            self.entry.set_text(self.sent[self.sent_index] if self.sent_index < len(self.sent) else "")
+            self.entry.set_position(-1)  # the cursor at the end
+            return True
+        return False
+
     def _send(self, entry):
         text = entry.get_text().strip()
         if not text:
             return
+        if not self.sent or self.sent[-1] != text:
+            self.sent = [*self.sent, text][-SENT_LIMIT:]
+        self.sent_index = len(self.sent)
         entry.set_text("")
         self.release()
         self.on_send(text)  # the session decides if a typed "yes" or "no" answers a question

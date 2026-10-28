@@ -38,6 +38,10 @@ ABOUT_SYSTEM = re.compile(r"\b(system|pc|laptop|computer|boot|service|update|dri
 ABOUT_REPO = re.compile(r"\b(dotfiles|config|hyprland|waybar|companion|companion|desktop|theme|keybinds?|zsh|kitty|"
                         r"script|rofi|swaync|widget)\b", re.IGNORECASE)
 PATH_IN_TEXT = re.compile(r"(~/[^\s'\"]+|/(?:home|tmp|etc|usr|var|opt|srv|mnt)/[^\s'\"]+)")
+# Her newest Claude Code window. Kitty makes its socket a moment after the start, so tell_claude
+# right after "open claude" must wait for it, or it opens a second window.
+NEW_WINDOW = {"socket": None, "at": 0.0}
+NEW_WINDOW_SECONDS = 15
 
 
 # ---------- the path, the folder, the deny list ----------
@@ -154,6 +158,7 @@ def open_window(runner, prompt="", folder=None):
          CLAUDE] + (["--", prompt] if prompt else []))
     if not r.ok:
         return Result(False, f"failed: Claude Code did not start: {r.text}")
+    NEW_WINDOW.update(socket=socket, at=time.time())
     return Result(True, "Claude Code is open in a new window" + (" with the message." if prompt else "."))
 
 
@@ -188,12 +193,20 @@ def _wait_ready(runner, socket, seconds=20):
     return "question"  # not ready in time: do not type blindly
 
 
+def _wait_for_new_window():
+    """A window opened in the last seconds may have no socket yet: wait until it has one."""
+    socket, at = NEW_WINDOW["socket"], NEW_WINDOW["at"]
+    while socket and not socket.exists() and time.time() - at < NEW_WINDOW_SECONDS:
+        time.sleep(0.25)
+
+
 def type_into_window(runner, message):
     """Type a message into the newest open Claude Code window, then press Enter.
     With no open window, open one with the message."""
     message = " ".join(message.split())  # one line: a newline would press Enter early
     if message[:1] in ("!", "/", "#", "-"):  # ! runs a shell command, / a command, # edits memory
         return Result(False, "REFUSED: the message must be plain text. It cannot start with ! / # or -.")
+    _wait_for_new_window()
     for socket in sorted(SOCKETS.glob("companion-claude-*"), reverse=True):
         state = _wait_ready(runner, socket)
         if state == "gone":

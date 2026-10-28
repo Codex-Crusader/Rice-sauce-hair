@@ -4,3 +4,7 @@
 typeset -U path
 path=("$HOME/.local/bin" $path)
 export PATH
+
+# Editor for git, sudoedit, and other programs
+export EDITOR=vim
+export VISUAL=vim

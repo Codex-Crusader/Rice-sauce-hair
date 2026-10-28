@@ -1,0 +1,16 @@
+# After each pacman transaction, remove old package files from the cache.
+# Keep only the newest copy of installed packages (a reinstall needs no internet),
+# and no copy of removed packages. paccache.timer does the same each week.
+# To go back to an old version, use a snapper snapshot or the Arch Linux Archive.
+[Trigger]
+Type = Package
+Operation = Install
+Operation = Upgrade
+Operation = Remove
+Target = *
+
+[Action]
+Description = Removing old package files from the cache...
+When = PostTransaction
+Depends = pacman-contrib
+Exec = /usr/bin/sh -c 'paccache -qrk1; paccache -qruk0'

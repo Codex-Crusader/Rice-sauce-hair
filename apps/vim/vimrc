@@ -1,0 +1,71 @@
+" ~/.vim/vimrc: Vim settings. Linked from ~/dotfiles/apps/vim/vimrc.
+" No plugins: everything here is built into Vim 9.
+
+" Basics
+set nocompatible
+filetype plugin indent on
+syntax on
+set encoding=utf-8
+set hidden                      " switch buffers without a save
+set mouse=a
+set updatetime=300
+set belloff=all
+
+" Look
+set termguicolors
+silent! colorscheme habamax
+set number relativenumber
+set cursorline
+set signcolumn=yes
+set scrolloff=5
+set laststatus=2
+set showcmd
+set wildmenu wildoptions=pum
+set list listchars=tab:»\ ,trail:·,nbsp:␣
+
+" Search: ignore case, except when the search has a capital letter
+set ignorecase smartcase
+set incsearch hlsearch
+
+" Indent: 4 spaces. Filetype plugins can change this.
+set expandtab shiftwidth=4 softtabstop=4 tabstop=4
+set autoindent
+set backspace=indent,eol,start
+
+" New windows open below and to the right
+set splitbelow splitright
+
+" Swap, backup, and undo files go to ~/.local/state/vim (not next to the file)
+let s:state = expand('~/.local/state/vim')
+for s:dir in ['swap', 'backup', 'undo']
+    call mkdir(s:state . '/' . s:dir, 'p', 0700)
+endfor
+let &directory = s:state . '/swap//'
+let &backupdir = s:state . '/backup//'
+let &undodir   = s:state . '/undo//'
+set undofile
+let &viminfofile = s:state . '/viminfo'
+
+" Keymaps (leader = Space)
+let mapleader = ' '
+nnoremap <silent> <Esc><Esc> :nohlsearch<CR>
+nnoremap <leader>w :write<CR>
+nnoremap <leader>q :quit<CR>
+nnoremap <leader>e :Explore<CR>
+nnoremap <C-h> <C-w>h
+nnoremap <C-j> <C-w>j
+nnoremap <C-k> <C-w>k
+nnoremap <C-l> <C-w>l
+
+" Clipboard: use wl-copy and wl-paste, because Arch vim has no Wayland clipboard
+" Space y copies the selection. Space p pastes.
+if executable('wl-copy')
+    xnoremap <silent> <leader>y y:call system('wl-copy', @")<CR>
+    nnoremap <silent> <leader>p :let @" = system('wl-paste --no-newline')<CR>p
+endif
+
+" Go back to the last cursor position when a file opens
+autocmd BufReadPost * if line("'\"") > 1 && line("'\"") <= line('$') | exe 'normal! g`"' | endif
+
+" Git commit messages: wrap at 72 columns and check spelling
+autocmd FileType gitcommit setlocal textwidth=72 spell

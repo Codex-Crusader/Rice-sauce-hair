@@ -111,10 +111,3 @@ def build_tools(chrome, runner, config, store):
              preview=lambda message: (True, f'type this into Claude Code: "{message}"')),
     ]
     return {t.name: t for t in tools}
-
-
-def ollama_schema(tools):
-    return [{"type": "function", "function": {
-        "name": t.name, "description": t.description,
-        "parameters": {"type": "object", "properties": t.params, "required": t.required}}}
-        for t in tools.values()]

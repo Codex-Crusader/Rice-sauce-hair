@@ -110,8 +110,15 @@ def bluetooth_status(runner):
 
 
 def health_check(runner, repo):
-    r = runner.run([str(repo / "bin/health")], timeout=60)
-    return Result(True, r.text)  # health exits 0 or 1; its WARN lines say what is wrong
+    """bin/health, with the count and the problems first: from 20 lines of OK, the model made up problems."""
+    r = runner.run([str(repo / "bin/health")], timeout=60)  # health exits 0 or 1: the lines decide
+    lines = r.text.splitlines()
+    warns = [l for l in lines if l.startswith("WARN")]
+    oks = [l.removeprefix("OK").strip() for l in lines if l.startswith("OK")]
+    if not warns and not oks:
+        return Result(False, f"the health check did not run: {r.text[-300:] or 'no output'}")
+    head = f"{len(warns)} problem(s), {len(oks)} checks OK."
+    return Result(True, "\n".join([head, *warns, "OK: " + "; ".join(oks)]))
 
 
 # ---------- terminal (visible to the user) ----------

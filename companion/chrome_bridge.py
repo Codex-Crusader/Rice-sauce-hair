@@ -71,8 +71,12 @@ class ChromeBridge:
             async for message in socket:
                 if message == "ping":  # keep-alive from the extension
                     continue
-                reply = json.loads(message)
-                future = self.pending.pop(reply.get("id"), None)
+                try:
+                    reply = json.loads(message)
+                    future = self.pending.pop(reply.get("id"), None)
+                except (json.JSONDecodeError, AttributeError, TypeError):  # one bad message must not end the link
+                    log.warning("bad message from the Chrome extension: %r", message[:100])
+                    continue
                 if future and not future.done():
                     future.set_result(reply.get("result"))
         except websockets.ConnectionClosed:
@@ -83,10 +87,14 @@ class ChromeBridge:
 
     async def _send(self, cmd, args):
         self.next_id += 1
+        request_id = self.next_id
         future = self.loop.create_future()
-        self.pending[self.next_id] = future
-        await self.socket.send(json.dumps({"id": self.next_id, "cmd": cmd, "args": args}))
-        return await asyncio.wait_for(future, 5)
+        self.pending[request_id] = future
+        try:
+            await self.socket.send(json.dumps({"id": request_id, "cmd": cmd, "args": args}))
+            return await asyncio.wait_for(future, 5)
+        finally:
+            self.pending.pop(request_id, None)  # also after a timeout, or each lost answer stays in memory
 
     # ----- called from the brain thread -----
 

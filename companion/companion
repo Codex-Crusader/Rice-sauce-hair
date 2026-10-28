@@ -2,4 +2,9 @@
 # Start Companion. gtk4-layer-shell must load before GTK, so preload it.
 # The process is named "companion", so Super+A can signal it: pkill -USR1 -f '^companion'
 cd "$(dirname "$(readlink -f "$0")")" || exit 1
-LD_PRELOAD=/usr/lib/libgtk4-layer-shell.so exec -a companion python3 main.py "$@"
+export LD_PRELOAD=/usr/lib/libgtk4-layer-shell.so
+# With this flag file, record which lines run (settings in .coveragerc), to find dead code
+if [ -e "$HOME/.config/companion/coverage" ]; then
+    exec -a companion python3 -m coverage run --append main.py "$@"
+fi
+exec -a companion python3 main.py "$@"

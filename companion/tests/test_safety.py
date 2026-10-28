@@ -4,10 +4,15 @@ The model calls (llm.plan, llm.speak) are replaced by fakes; tools are recorded,
 
   python3 -m unittest discover -s tests -p 'test_*.py'     (from the companion folder)
 """
+import asyncio
+import dataclasses
+import functools
+import json
 import os
 import shutil
 import sys
 import tempfile
+import threading
 import time
 import unittest
 from pathlib import Path
@@ -17,6 +22,7 @@ HERE = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(HERE))
 
 import candidates
+import chrome_bridge
 import handoff
 import llm
 import mood
@@ -935,6 +941,201 @@ class Results(unittest.TestCase):
         runner = FakeRunner()
         tools.system.set_brightness(runner, 0)
         self.assertEqual(runner.calls[0][-1], "1%")
+
+
+class ReadyRunner(FakeRunner):
+    """Every Claude Code window shows its prompt sign at once."""
+
+    def run(self, cmd, timeout=10, input=None, cwd=None):
+        self.calls.append(cmd)
+        return Result(True, "\u276f" if "get-text" in cmd else "")
+
+
+class ClaudeWindow(unittest.TestCase):
+    def test_tell_claude_right_after_open_uses_the_new_window(self):
+        """"open claude and tell it X": the socket comes a moment after the start. No second window."""
+        sockets = TMP / "sockets"
+        sockets.mkdir(exist_ok=True)
+        runner = ReadyRunner()
+        with mock.patch.object(handoff, "SOCKETS", sockets), \
+                mock.patch.dict(handoff.NEW_WINDOW, {"socket": None, "at": 0.0}):
+            handoff.open_window(runner)
+            threading.Timer(0.5, handoff.NEW_WINDOW["socket"].touch).start()  # kitty makes its socket
+            result = handoff.type_into_window(runner, "hi")
+        self.assertIn("typed", result.text)
+        self.assertEqual(sum(1 for c in runner.calls if c[0] == "kitty" and "@" not in c), 1)  # one window
+
+    def test_old_window_does_not_make_her_wait(self):
+        with mock.patch.dict(handoff.NEW_WINDOW, {"socket": TMP / "gone", "at": time.time() - 60}):
+            start = time.time()
+            handoff._wait_for_new_window()
+        self.assertLess(time.time() - start, 1)
+
+
+class Replies(unittest.TestCase):
+    def test_claims_about_unseen_things_are_removed(self):
+        self.assertEqual(voice.clean("I searched for it. The results show many images, but I can't view them. 🌐"),
+                         ("idle", "I searched for it. 🌐"))
+        self.assertEqual(voice.clean("I opened Kitty. The terminal is open, but I can't interact with it directly."),
+                         ("idle", "I opened Kitty. The terminal is open."))
+        self.assertEqual(voice.clean("No Netflix tab is open. I can't find it."),
+                         ("idle", "No Netflix tab is open. I can't find it."))
+        self.assertEqual(voice.clean("I can't confirm that."), ("idle", "I can't confirm that."))  # never empty
+
+    def test_saved_chat_loses_tags_and_unseen_claims(self):
+        old = {"role": "assistant", "content": "[idle] I opened it. I can't interact with it directly."}
+        self.assertEqual(voice.scrub(old)["content"], "I opened it.")
+        self.assertEqual(voice.scrub({"role": "user", "content": "[x] hi"})["content"], "[x] hi")
+
+    def test_face_follows_the_results(self):
+        s, _, _, _ = make_session()
+        work = Work("open kitty", None)
+        work.results.append(("open_app", {}, Result(True, "opened kitty")))
+        self.assertEqual(s._face("idle", work), "happy")
+        work.results.append(("open_app", {}, Result(False, "it broke")))
+        self.assertEqual(s._face("happy", work), "worried")
+        not_found = Work("open x", None)
+        not_found.results.append(("open_app", {}, Result(False, "not installed", final=True)))
+        self.assertEqual(s._face("happy", not_found), "idle")
+
+    def test_short_absence_is_not_a_while(self):
+        m = mood.Mood(Store(Config(PERSONA, data_dir=TMP)))
+        m.previous_visit = time.time() - 12 * 60
+        self.assertIn("Do not say that it has been a while", m.away_text())
+        m.previous_visit = time.time() - 3 * 86400
+        self.assertEqual(m.away_text(), "the user was last here 3 days ago.")
+
+    def test_typed_stop_cancels_while_she_works(self):
+        s, events, _, _ = make_session()
+        s.busy = True
+        s.send("stop")
+        self.assertEqual(events, [("reply", "I stopped.")])
+        self.assertTrue(s.state.cancelled)
+
+
+class HealthResult(unittest.TestCase):
+    def runner(self, text):
+        r = FakeRunner()
+        r.run = lambda cmd, timeout=10, input=None, cwd=None: Result(False, text)
+        return r
+
+    def test_problems_come_first(self):
+        r = tools.system.health_check(self.runner("OK    disk / 51% used\nWARN  77 updates waiting\nOK    Ollama running"),
+                                      Path("/repo"))
+        self.assertTrue(r.ok)
+        self.assertEqual(r.text.splitlines(), ["1 problem(s), 2 checks OK.", "WARN  77 updates waiting",
+                                               "OK: disk / 51% used; Ollama running"])
+
+    def test_no_output_is_a_failure(self):
+        self.assertFalse(tools.system.health_check(self.runner("error: timed out"), Path("/repo")).ok)
+
+
+class ChromeLink(unittest.TestCase):
+    def bridge(self):
+        b = object.__new__(chrome_bridge.ChromeBridge)  # no server: the live companion has the port
+        b.token, b.socket, b.pending, b.next_id = "token", None, {}, 0
+        b.loop = asyncio.new_event_loop()
+        self.addCleanup(b.loop.close)
+        return b
+
+    def test_lost_answer_leaves_nothing_behind(self):
+        b = self.bridge()
+
+        class Silent:
+            async def send(self, text):
+                pass
+        b.socket = Silent()
+        with mock.patch.object(chrome_bridge.asyncio, "wait_for", side_effect=TimeoutError), \
+                self.assertRaises(TimeoutError):
+            b.loop.run_until_complete(b._send("list", {}))
+        self.assertEqual(b.pending, {})
+
+    def test_bad_message_does_not_end_the_link(self):
+        b = self.bridge()
+        future = b.loop.create_future()
+        b.pending[1] = future
+
+        class Socket:
+            request = mock.Mock(headers={"Origin": "chrome-extension://x"})
+
+            async def recv(self):
+                return "token"
+
+            async def close(self, code, reason):
+                pass
+
+            def __aiter__(self):
+                async def messages():
+                    for m in ("{bad json", "[1]", json.dumps({"id": [1]}), json.dumps({"id": 1, "result": "tabs"})):
+                        yield m
+                return messages()
+        with self.assertLogs("chrome", "WARNING") as logs:
+            b.loop.run_until_complete(b._handle(Socket()))
+        self.assertEqual(len(logs.records), 3)
+        self.assertEqual(future.result(), "tabs")
+
+
+class HiddenErrors(unittest.TestCase):
+    def test_bug_inside_a_tool_is_logged_not_called_wrong_arguments(self):
+        s, _, _, _ = make_session()
+        tool = s.tools["time_now"]
+
+        def broken():
+            return len(None)  # a TypeError inside the tool: a bug, not the model's fault
+        with mock.patch.object(tool, "run", broken), self.assertLogs("session", "ERROR") as logs:
+            result = s.run_tool(tool, {})
+        self.assertFalse(result.ok)
+        self.assertNotIn("wrong arguments", result.text)
+        self.assertIn("Traceback", logs.output[0])
+
+    def test_wrong_arguments_are_still_named(self):
+        s, _, _, _ = make_session()
+        real = dataclasses.replace(s.tools["set_volume"], run=functools.partial(tools.system.set_volume, FakeRunner()))
+        result = s.run_tool(real, {"loudness": 5})
+        self.assertIn("wrong arguments for set_volume", result.text)
+
+    def test_model_timeout_says_so(self):
+        s, events, _, model = make_session()
+        model.plan = mock.Mock(side_effect=TimeoutError("timed out"))
+        with self.assertLogs("session", "WARNING"):
+            run(s, model, "what is the meaning of life")
+        self.assertEqual(events[-1], ("reply", "My thoughts took too long. Please ask me again."))
+
+    def test_broken_desktop_file_is_skipped(self):
+        folder = TMP / "apps-broken"
+        folder.mkdir(exist_ok=True)
+        (folder / "kitty.desktop").write_text("[Desktop Entry]\nName=kitty\n")
+        (folder / "gone.desktop").symlink_to(TMP / "nothing-here")
+        with mock.patch.object(tools.apps, "APP_DIRS", [folder]), \
+                mock.patch.dict(tools.apps._cache, {"key": None, "entries": []}):
+            self.assertEqual([name for _, name, _ in tools.apps.desktop_entries()], ["kitty"])
+
+
+class Round3(unittest.TestCase):
+    def test_offer_after_an_action_goes_but_stays_in_chat(self):
+        text = "I opened the report. Would you like me to summarize it? \U0001F338"
+        with mock.patch.object(llm, "speak", lambda *a, **k: text):
+            config = Config(PERSONA, data_dir=TMP)
+            m = mood.Mood(Store(config))
+            self.assertEqual(voice.speak(config, m, [], [], "note", acted=True)[1], "I opened the report. \U0001F338")
+            self.assertEqual(voice.speak(config, m, [], [], "note")[1], text)
+        self.assertEqual(voice.drop_offer("Would you like tea?"), "Would you like tea?")  # never empty
+
+    def test_more_unseen_and_cliche_forms(self):
+        self.assertEqual(voice.clean("I sent it. It runs, but I didn't interact with it directly.")[1], "I sent it.")
+        self.assertEqual(voice.clean("I searched. I can't see the results, but it is open.")[1], "I searched.")
+        self.assertEqual(voice.clean("It is not installed. Would you like me to help with something else?")[1],
+                         "It is not installed.")
+
+    def test_no_happy_face_over_a_health_problem(self):
+        s, _, _, _ = make_session()
+        work = Work("health", None)
+        work.results.append(("health_check", {}, Result(True, "1 problem(s), 5 checks OK.\nWARN  disk full")))
+        self.assertEqual(s._face("happy", work), "idle")
+        self.assertEqual(s._face("worried", work), "worried")
+        fine = Work("health", None)
+        fine.results.append(("health_check", {}, Result(True, "0 problem(s), 5 checks OK.\nOK: no failed system services")))
+        self.assertEqual(s._face("idle", fine), "happy")
 
 
 if __name__ == "__main__":

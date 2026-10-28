@@ -11,9 +11,9 @@ The UI puts events in the queue (send, answer, remark). The worker takes them on
 Callbacks (on_reply, on_state, on_question) come from the worker thread; the UI must hand them
 to the GTK main loop.
 """
+import inspect
 import logging
 import queue
-import re
 import threading
 import urllib.error
 from dataclasses import dataclass, field
@@ -25,16 +25,15 @@ import planner
 import policy
 import tools as toolbox
 import voice
-from mood import Mood
+from mood import Mood, found_problem
 from runner import Result, Runner
 from store import Store
 
 log = logging.getLogger("session")
 YES, NO = ("yes", "y", "ok", "okay", "sure", "do it"), ("no", "n", "nope", "don't", "stop")
+STOP = ("stop", "cancel", "never mind", "nevermind")  # typed while she works: the same as the Stop menu item
 HISTORY_LIMIT = 64  # chat messages kept (the model sees fewer)
 # Tools that act on one tab or window, and the argument that names it: what "it" means next time
-# "bring up my editor": she means the open window, not a new one
-BRING_UP = re.compile(r"\b(bring up|show me|switch to|go to|go back to|back to|focus|pull up)\b", re.IGNORECASE)
 TARGET_ARGS = {"tell_claude": ("claude", "message"), "web_search": ("tab", "query"), "switch_tab": ("tab", "tab"),
                "open_tab": ("tab", "url"), "open_url": ("tab", "url"), "focus_window": ("window", "window"),
                "open_app": ("window", "name")}
@@ -116,7 +115,7 @@ class Session:
         self.store = Store(config)
         self.tools = toolbox.build_tools(chrome, self.runner, config, self.store)
         self.mood = Mood(self.store, config.user, config.persona.get("moods"))
-        self.state = State(history=list(self.mood.history()))  # the chat continues after a restart
+        self.state = State(history=[voice.scrub(m) for m in self.mood.history()])  # the chat continues after a restart
         self.on_reply, self.on_state, self.on_question = on_reply, on_state, on_question
         self.queue = queue.Queue()
         self.busy = False
@@ -129,6 +128,9 @@ class Session:
         word = text.strip().lower().rstrip(".!")
         if self.state.question and word in YES + NO:
             self.answer(word in YES)
+        elif self.busy and word in STOP:
+            self.cancel()
+            self.on_reply("idle", "I stopped.")
         else:
             self.queue.put(UserMessage(text))
 
@@ -167,6 +169,9 @@ class Session:
                 self.on_reply("worried", f"I cannot think clearly yet: {reason}.")
             except urllib.error.URLError:
                 self.on_reply("worried", "I cannot reach my thoughts right now. Is the Ollama service running?")
+            except TimeoutError:  # the model did not answer in time (a cold start, or a full GPU)
+                log.warning("the model did not answer in time (%s)", type(event).__name__)
+                self.on_reply("worried", "My thoughts took too long. Please ask me again.")
             except Exception as e:  # never let the worker die on a bad reply
                 log.exception("error in %s", type(event).__name__)
                 self.on_reply("worried", f"Something went wrong inside me: {e}")
@@ -264,7 +269,7 @@ class Session:
 
     def _prefer_open_window(self, step, work):
         """ "Bring up X": focus the open window of app X instead of opening X again."""
-        if step.tool != "open_app" or not BRING_UP.search(work.request):
+        if step.tool != "open_app" or not candidates.BRING_UP.search(work.request):
             return step
         app = toolbox.find_app(str(step.args.get("name", "")))
         for c in work.candidates:
@@ -371,12 +376,15 @@ class Session:
     def run_tool(self, tool, args):
         """Do one action. Exceptions become failed Results. Remembers what "it" means."""
         try:
-            result = tool.run(**args)
-        except TypeError as e:
+            inspect.signature(tool.run).bind(**args)
+        except TypeError as e:  # the model's arguments do not fit (a TypeError inside the tool is a bug: below)
             result = Result(False, f"wrong arguments for {tool.name}: {e}")
-        except Exception as e:
-            log.exception("tool %s raised", tool.name)  # the traceback goes to the log, for debugging
-            result = Result(False, f"{tool.name} failed: {e}")
+        else:
+            try:
+                result = tool.run(**args)
+            except Exception as e:
+                log.exception("tool %s raised", tool.name)  # the traceback goes to the log, for debugging
+                result = Result(False, f"{tool.name} failed: {e}")
         if result.ok and tool.name == "run_in_terminal" and policy.is_claude_command(str(args.get("command", ""))):
             self.state.last_target = ("claude", "")
         elif result.ok and tool.name in TARGET_ARGS:
@@ -393,17 +401,35 @@ class Session:
             return True, f'{tool.name.replace("_", " ")}: {", ".join(str(v) for v in args.values())}'
         try:
             return tool.preview(**args)
-        except Exception:  # noqa: BLE001  (the model's arguments can break a preview in any way)
+        except Exception:  # the model's arguments can break a preview in any way
+            log.exception("preview of %s(%s) raised", tool.name, args)
             return False, f"wrong arguments for {tool.name}"
+
+    MOOD_FACES = {"cheerful": "happy", "playful": "happy", "hurt": "worried"}
+
+    def _face(self, expression, work):
+        """Her face: the model's tag, checked against the results. The model nearly always writes [idle],
+        so with no clear tag the results and her mood decide."""
+        results = [r for _, _, r in work.results] if work else []
+        if any(not r.ok and not r.final for r in results):
+            return "worried"
+        if expression == "happy" and any(not r.ok for r in results):
+            return "idle"  # no happy face over a refusal or a "not found"
+        if any(found_problem(r.text) for r in results):  # it ran, but it found a problem (a health WARN)
+            return "worried" if expression == "worried" else "idle"
+        if expression != "idle":
+            return expression
+        if results and all(r.ok for r in results):
+            return "happy"
+        return self.MOOD_FACES.get(self.mood.current()[0], "idle")
 
     def _say(self, note, work=None, keep=True):
         expression, text = voice.speak(self.config, self.mood, self.store.memory(), self.state.history, note,
-                                       options=self.options)
-        if work and work.results and any(not r.ok for _, _, r in work.results) and expression == "happy":
-            expression = "idle"  # no happy face over a failure
+                                       options=self.options, acted=bool(work and work.results))
+        expression = self._face(expression, work)
         if keep:
             done = [f"{n}: {'ok' if r.ok else 'failed'}" for n, _, r in (work.results if work else [])]
-            self.state.history.append({"role": "assistant", "content": f"[{expression}] {text}" +
+            self.state.history.append({"role": "assistant", "content": text +
                                        (f"  (tools: {'; '.join(done[-4:])})" if done else "")})
             del self.state.history[:-HISTORY_LIMIT]
         self.mood.save(self.state.history)

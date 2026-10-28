@@ -22,7 +22,10 @@ def _entries():
         entries = []
         for d in APP_DIRS:
             for f in d.glob("*.desktop"):
-                lines = f.read_text(errors="ignore").split("[Desktop Action")[0].splitlines()
+                try:
+                    lines = f.read_text(errors="ignore").split("[Desktop Action")[0].splitlines()
+                except OSError:  # a broken link or an unreadable file: skip it, do not break every app search
+                    continue
                 if "NoDisplay=true" in lines:
                     continue
                 name = next((l[5:].strip() for l in lines if l.startswith("Name=")), f.stem)
